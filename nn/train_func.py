@@ -42,15 +42,22 @@ def train_model(
         model.train()
         running_loss = 0.0
         running_corrects = 0.0
-        for i, (inputs, target) in enumerate(dataloaders['train']):
-            inputs = inputs.to(device).float()
-            target = target.to(device).float()
+        for i, data in enumerate(dataloaders['train']):
+
+            for i_d in range(len(data)):
+                data[i_d] = data[i_d].to(device).float()
+
+            target = data[-1]
             optimizer.zero_grad()
-            outputs = model(inputs)
+            if len(data) == 2:
+                outputs = model(data[0])
+            elif len(data) == 5:
+                outputs = model(data[0], data[1], data[2], data[3])
+
             loss = criterion(outputs, target)
             loss.backward()
             optimizer.step()
-            running_loss += loss.item() * inputs.size(0)
+            running_loss += loss.item() * target.size(0)
             running_corrects += torch.sum((outputs+.5).int().t() == target.data.int().t())
         epoch_loss = running_loss / len(dataloaders['train'].dataset)
         epoch_corrects = running_corrects.double() / len(dataloaders['train'].dataset)
@@ -61,10 +68,15 @@ def train_model(
         val_running_loss = 0.0
         val_running_corrects = 0.0
 
-        for i, (inputs, target) in enumerate(dataloaders['val']):
-            inputs = inputs.to(device).float()
-            target = target.to(device).float()
-            outputs = model(inputs)
+        for i, data in enumerate(dataloaders['val']):
+            for i_d in range(len(data)):
+                data[i_d] = data[i_d].to(device).float()
+
+            target = data[-1]
+            if len(data) == 2:
+                outputs = model(data[0])
+            elif len(data) == 5:
+                outputs = model(data[0], data[1], data[2], data[3])            
             if i==0:
                 val_out = outputs.detach().cpu().numpy()
                 val_tar = target.detach().cpu().numpy()
@@ -73,7 +85,7 @@ def train_model(
                 val_tar = np.concatenate((val_tar, target.detach().cpu().numpy()))                
                 
             loss = criterion(outputs, target)
-            val_running_loss += loss.item() * inputs.size(0)
+            val_running_loss += loss.item() * target.size(0)
             val_running_corrects += torch.sum((outputs+.5).int().t() == target.data.int().t())
         val_epoch_loss = val_running_loss / len(dataloaders['val'].dataset)
         val_epoch_corrects = val_running_corrects.double() / len(dataloaders['val'].dataset)
@@ -105,13 +117,13 @@ def train_model(
     return model, history
 
 
-from . import JetData, fcn_net
+from . import JetData, fcn_net, PersNet
 
 class Trainer:
     r'''
     train data in 5 folds 
     '''
-    def __init__(self, name2load, layers, indim=50, verbose=False, loader_params=None, train_params=None):
+    def __init__(self, name2load, layers, indim=50, verbose=False, loader_params=None, train_params=None, use_PersNet=False):
         r'''
         `train_params`: a dict with key `'folder2save', 'name2save', 'num_epochs', 'device', 'hist_name'`
 
@@ -120,12 +132,17 @@ class Trainer:
         super().__init__()
         ## train data to be loaded 
         self.name2load = name2load
-
+        
+        ## if use_PersNet layers is a dict with key b0_phi_layers, b1_phi_layers, b0_rho_layers, b1_rho_layers, fc_layers
+        ## else the hidden layers for fcn
         self.layers = layers
+        
         self.verbose = verbose        
         self.indim = indim        
         self.loader_params = loader_params
         self.train_params = train_params
+
+        self.use_PersNet = use_PersNet
     
     def _train_iter(self, idx):
         r'''
@@ -134,7 +151,11 @@ class Trainer:
         if self.verbose:
             print('training model with idx = {:d}'.format(idx))
 
-        net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
+        if self.use_PersNet:
+            net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
+        else:
+            net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
+
         JD = JetData(train=True, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
         train_loader, val_loader = JD.data_loader()
         loaders = { 'train': train_loader, 'val': val_loader}
