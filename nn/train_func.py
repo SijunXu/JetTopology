@@ -193,3 +193,10 @@ class Trainer:
             
         for idx in range(kfold):
             self._train_iter(idx)    
+
+
+class Evaluater:
+    def __init__(self):
+        super().__init__()            
+
+    

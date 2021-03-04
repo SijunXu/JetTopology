@@ -115,7 +115,7 @@ class ML_data:
                 zeta_type=self.zeta_type, 
                 R=self.R
                 )
-            test_b0_pair, test_b1_pair = pers_pairs['b0'], pers_pairs['b1']
+            test_b0_pair[key], test_b1_pair[key] = pers_pairs['b0'], pers_pairs['b1']
 
         ml_data = {
             'train_b0': train_b0_pair,
