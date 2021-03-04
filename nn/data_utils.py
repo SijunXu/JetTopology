@@ -24,13 +24,14 @@ class PersDataset(data.Dataset):
     Dataset for PersNet
     '''
     def __init__(self, b0, b0_weight, b1, b1_weight, target):        
-        if len(b0_weight.shape) == 2:  
-            shape = b0_weight.shape         
-            b0_weight.reshape((shape[0], shape[1], 1))
-        if len(b1_weight.shape) == 2:  
-            shape = b1_weight.shape         
-            b1_weight.reshape((shape[0], shape[1], 1))
+        
+        shape = b0_weight.shape         
+        b0_weight = b0_weight.reshape((shape[0], shape[1], 1))
+    
+        shape = b1_weight.shape         
+        b1_weight = b1_weight.reshape((shape[0], shape[1], 1))
         target = np.reshape(target, (-1, 1)).astype(np.float32)
+
         self.b0, self.b0_weight, self.b1, self.b1_weight, self.target = map(torch.from_numpy, (b0, b0_weight, b1, b1_weight, target))
 
     def __getitem__(self, index):
@@ -158,14 +159,33 @@ class JetData:
         return train_data_tra, train_data_val
 
     def _make_dataset(self, b0, b1):
+        
+        def pad_cat(a, b):
+            shape_a, shape_b = a.shape, b.shape
+
+            if len(shape_a) == 3:
+                dim_cat = max(shape_a[1], shape_b[1])
+                X = np.zeros((shape_a[0] + shape_b[0], dim_cat, shape_a[-1]))
+                X[:shape_a[0], :shape_a[1]] = a
+                X[shape_a[0]:, :shape_b[1]] = b
+                return X
+
+            elif len(shape_a) == 2:
+                dim_cat = max(shape_a[1], shape_b[1])
+                X = np.zeros((shape_a[0] + shape_b[0], dim_cat))
+                X[:shape_a[0], :shape_a[1]] = a
+                X[shape_a[0]:, :shape_b[1]] = b
+                return X
+
         feats = []
         for key in ['q', 'g']:
-            #b0_feat, b1_feat, b0_weight, b1_weight = self._cat_persnet_feat(b0[key], b1[key])
-            feats.append(self._cat_persnet_feat(b0[key], b1[key]))
-        b0_feat = np.concatenate((feats[0][0], feats[1][0]), axis=0)
-        b1_feat = np.concatenate((feats[0][1], feats[1][1]), axis=0)
-        b0_weight = np.concatenate((feats[0][2], feats[1][2]), axis=0)
-        b1_weight = np.concatenate((feats[0][3], feats[1][3]), axis=0)
+            #b0_feat, b1_feat, b0_weight, b1_weight = self._cat_persnet_feat(b0[key], b1[key])            
+            feats.append(self._cat_persnet_feat(b0[key], b1[key]))            
+        b0_feat = pad_cat(feats[0][0], feats[1][0])
+        b1_feat = pad_cat(feats[0][1], feats[1][1])
+        b0_weight = pad_cat(feats[0][2], feats[1][2])
+        b1_weight = pad_cat(feats[0][3], feats[1][3])
+        
         y = [1 for _ in range(len(feats[0][0]))] + [0 for _ in range(len(feats[1][0]))]
         return PersDataset(b0_feat, b0_weight, b1_feat, b1_weight, y)
 

@@ -157,7 +157,10 @@ class Trainer:
             net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
 
         JD = JetData(train=True, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
-        train_loader, val_loader = JD.data_loader()
+        if self.use_PersNet:
+            train_loader, val_loader = JD.pers_data_loader()
+        else:
+            train_loader, val_loader = JD.data_loader()
         loaders = { 'train': train_loader, 'val': val_loader}
         criterion = nn.BCELoss()
         optimizer = torch.optim.Adam(

@@ -8,7 +8,7 @@ class fcn_net(nn.Module):
     nn model for tabuler data
     shape of output: (n_data, 1)
     '''    
-    def __init__(self, layers=[128, 128, 128, 64, 16], indim=50, BN=True):
+    def __init__(self, layers=[128, 128, 128, 64, 16], indim=50, BN=True, net_classify=True):
         super(fcn_net, self).__init__()
         def com_layer(d_in, d_out, BN=False):
             if BN:
@@ -20,12 +20,15 @@ class fcn_net(nn.Module):
             com_layer(indim, layers[i], BN) if i==0
             else com_layer(layers[i-1], layers[i], BN) for i in range(len(layers))
                                     ])
-        self.classify = nn.Sequential(nn.Linear(layers[-1], 1), nn.Sigmoid())
+        self.net_classify = net_classify
+        if self.net_classify:
+            self.classify = nn.Sequential(nn.Linear(layers[-1], 1), nn.Sigmoid())
         
     def forward(self, x):
         for l in self.layers:
              x = l(x)
-        x = self.classify(x)
+        if self.net_classify:
+            x = self.classify(x)
         return x
 
 class DeepSet(nn.Module):
@@ -35,8 +38,8 @@ class DeepSet(nn.Module):
     '''
     def __init__(self, indim, phi_layers, rho_layers, BN=True):
         super(DeepSet, self).__init__()
-        self.phi = fcn_net(layers=phi_layers, indim=indim, BN=BN)
-        self.rho = fcn_net(layers=rho_layers, indim=phi_layers[-1], BN=BN)
+        self.phi = fcn_net(layers=phi_layers, indim=indim, BN=False, net_classify=False)
+        self.rho = fcn_net(layers=rho_layers, indim=phi_layers[-1], BN=BN, net_classify=False)
 
     def forward(self, x, weight):
         x = (weight * self.phi(x)).sum(dim=1)
@@ -52,12 +55,13 @@ class PersNet(nn.Module)        :
 
         self.b0_net = DeepSet(indim=b0_dim, phi_layers=b0_phi_layers, rho_layers=b0_rho_layers, BN=BN)
         self.b1_net = DeepSet(indim=b1_dim, phi_layers=b1_phi_layers, rho_layers=b1_rho_layers, BN=BN)
-        self.fc = fcn_net(layers=fc_layers, indim=(b0_rho_layers[-1] + b1_rho_layers[-1]), BN=BN)
+
+        self.fc = fcn_net(layers=fc_layers, indim=(b0_rho_layers[-1] + b1_rho_layers[-1]), BN=BN, net_classify=False)
         self.classify = nn.Sequential(nn.Linear(fc_layers[-1], 1), nn.Sigmoid())
     
     def forward(self, b0, b0_weight, b1, b1_weight):
         b0_feat = self.b0_net(b0, b0_weight)
         b1_feat = self.b1_net(b1, b1_weight)
-        x = torch.cat([b0_feat, b1_feat], dim=-1)
+        x = torch.cat([b0_feat, b1_feat], dim=1)
         out = self.classify(self.fc(x))
         return out
