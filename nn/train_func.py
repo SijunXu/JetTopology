@@ -199,9 +199,9 @@ class Evaluater(Trainer):
     '''
     evaluate model for 5 folds trainings
     '''
-    def __init__(self):
-        super().__init__()         
-        self.device = self.loader_params['device']    
+    def __init__(self, name2load, layers, indim=50, verbose=False, loader_params=None, train_params=None, use_PersNet=False):
+        super(Evaluater, self).__init__(name2load, layers, indim, verbose, loader_params, train_params, use_PersNet)         
+        self.device = self.train_params['device']    
         self.loader_params['shuffle'] = False
         self.path2net = '/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
         if self.use_PersNet:
@@ -244,7 +244,7 @@ class Evaluater(Trainer):
         else:
             net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
 
-        weight2load = self.net_name + + '_run' + str(idx) + '.pt'
+        weight2load = self.net_name + '_run' + str(idx) + '.pt'
         net.load_state_dict(torch.load(weight2load))
 
         JD = JetData(train=False, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
