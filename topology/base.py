@@ -49,14 +49,36 @@ def createTINgraph(points, addVirtual=False):
     return graph
 
 
+def compute_dist(p4, p=0):
+    r'''
+    compute distance between particles 
+    '''
+    array = np.stack([p4.eta, p4.phi]).T
+    delta = distance_matrix(array, array)    
+    dist = np.zeros((len(p4), len(p4)))
+    for i in range(len(p4)):
+        for j in range(len(p4)):                
+            if i < j:
+                dist[i, j] = min(p4.pt[i] ** (2*p), p4.pt[j] ** (2*p)) * delta[i, j]
+    return np.maximum( dist, dist.transpose() )
+
 def create_kNN_graph(dist, k=3):
+    r'''
+    craete k-NN graph based on N * N distance 
+    '''
     edges = set()
-    for i in range(len(dist)):
-        mask = [i!=i_col for i_col in range(len(dist))]
-        dist_i = dist[i, mask]
-        kNN_idx = np.argpartition(dist_i, k)[:k]
-        for idx in kNN_idx:
-            edges.add( (i, idx) )        
+    n_p = len(dist)
+    k = min(n_p - 1, k)
+    kNN_idx = np.argsort(dist, axis=1)[:, 1:(k+1)]
+    for i, idx in enumerate(kNN_idx):
+        for j in idx:
+            edges.add( (i, j) )
+    # for i in range(len(dist)):
+    #     mask = [i!=i_col for i_col in range(len(dist))]
+    #     dist_i = dist[i, mask]
+    #     kNN_idx = np.argpartition(dist_i, k)[:min(len(n_p), k)]
+    #     for idx in kNN_idx:
+    #         edges.add( (i, idx) )            
     graph = nx.Graph(list(edges))
     return graph
     
