@@ -11,6 +11,184 @@ from . import get_p4, round_phi, IRC_cut
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+class RawData:
+    def __init__(self, fname):
+        super().__init__()
+        self.fname = fname
+
+    def get_data(self):
+        path2data = '/home/sijun/projects/Topology@Collider/jetTopo/data'
+        data = np.load(os.path.join(path2data, fname))    
+        
+        if fname == 'pyhtia_qg_antikt_jetparticle_06_v2.npz':
+            jet_type = 0
+        elif fname == 'pyhtia_qg_CA_jetparticle_06_v2.npz':
+            jet_type = 1
+        elif fname == 'herwig_qg_antikt_jetparticle_06_v2.npz':
+            jet_type = 2
+        
+        logger = logging.getLogger(__name__)
+        logger.info('processing data file: ' + fname)
+        antikt_particle = {}
+        for key in data:
+            antikt_particle[key] = data[key].astype(np.float32)
+            antikt_particle[key] = antikt_particle[key][np.count_nonzero(antikt_particle[key][:, :, 0], axis=1)>=3]
+        antikt_particle_4p = {}    
+        for key in data:
+            antikt_particle_4p[key] = get_p4(antikt_particle[key])
+        for key in data:
+            mask = antikt_particle[key][:, :, 0] > 0    
+            antikt_particle[key][:, :, 2] -= (mask.T*antikt_particle_4p[key].sum().phi).T
+            antikt_particle[key][:, :, 2][antikt_particle[key][:, :, 2]<-1*np.pi] += 2*np.pi
+            antikt_particle[key][:, :, 2][antikt_particle[key][:, :, 2]>=1*np.pi] -= 2*np.pi
+        for key in data:
+            antikt_particle_4p[key] = get_p4(antikt_particle[key])
+            
+        logger.info('binning q-g data into 100-350 GeV bins...')     
+        jet_particle = {}
+        keys = ['q', 'g']
+        (a, b) = (50, 100)
+        jet_particle[str(a)+'_'+str(b)] = {}
+        if jet_type == 0:
+            fnames = ['Zq_50_100_1', 'Zg_50_100_1']
+        elif jet_type == 1:
+            fnames = ['Zq_50_100_1', 'Zg_50_100_1']
+        elif jet_type == 2:
+            fnames = ['Zq_50_150_1', 'Zg_50_150_1']
+        for i in range(2):
+            jet_4p = antikt_particle_4p[fnames[i]].sum()
+            masked = antikt_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
+            masked[np.isnan(masked)] = 0
+            jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+
+        (a, b) = (100, 150)
+        jet_particle[str(a)+'_'+str(b)] = {}
+        if jet_type == 0:
+            fnames = ['Zq_100_1', 'Zg_100_1']
+        elif jet_type == 1:
+            fnames = ['Zq_100_1', 'Zg_100_1']
+        elif jet_type == 2:
+            fnames = ['Zq_50_150_1', 'Zg_50_150_1']    
+        for i in range(2):
+            jet_4p = antikt_particle_4p[fnames[i]].sum()
+            masked = antikt_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
+            masked[np.isnan(masked)] = 0
+            jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+
+        (a, b) = (150, 200)
+        jet_particle[str(a)+'_'+str(b)] = {}    
+        if jet_type == 0:
+            fnames = ['Zq_100_1', 'Zg_100_1']
+        elif jet_type == 1:
+            fnames = ['Zq_100_1', 'Zg_100_1']
+        elif jet_type == 2:
+            fnames = ['Zq_150_250_1', 'Zg_150_250_1']
+        for i in range(2):
+            jet_4p = antikt_particle_4p[fnames[i]].sum()
+            masked = antikt_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
+            masked[np.isnan(masked)] = 0
+            jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+
+        (a, b) = (200, 250)
+        jet_particle[str(a)+'_'+str(b)] = {}    
+        if jet_type == 0:
+            fnames = ['Zq_200_300_1', 'Zg_200_300_1']
+        elif jet_type == 1:
+            fnames = ['Zq_200_300_1', 'Zg_200_300_1']
+        elif jet_type == 2:
+            fnames = ['Zq_150_250_1', 'Zg_150_250_1']    
+        for i in range(2):
+            jet_4p = antikt_particle_4p[fnames[i]].sum()
+            masked = antikt_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
+            masked[np.isnan(masked)] = 0
+            jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+
+        (a, b) = (250, 300)
+        jet_particle[str(a)+'_'+str(b)] = {}
+        if jet_type == 0:
+            fnames = ['Zq_200_300_1', 'Zg_200_300_1']
+        elif jet_type == 1:
+            fnames = ['Zq_200_300_1', 'Zg_200_300_1']
+        elif jet_type == 2:
+            fnames = ['Zq_250_350_1', 'Zg_250_350_1']    
+        for i in range(2):
+            jet_4p = antikt_particle_4p[fnames[i]].sum()
+            masked = antikt_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
+            masked[np.isnan(masked)] = 0
+            jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+
+        (a, b) = (300, 350)
+        jet_particle[str(a)+'_'+str(b)] = {}
+        if jet_type == 0:
+            fnames = ['Zq_300_400_1', 'Zg_300_400_1']
+        elif jet_type == 1:
+            fnames = ['Zq_300_400_1', 'Zg_300_400_1']
+        elif jet_type == 2:
+            fnames = ['Zq_250_350_1', 'Zg_250_350_1'] 
+        for i in range(2):
+            jet_4p = antikt_particle_4p[fnames[i]].sum()
+            masked = antikt_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
+            masked[np.isnan(masked)] = 0
+            jet_particle[str(a)+'_'+str(b)][keys[i]] = masked        
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+                
+        if dRmin is None:
+            dRmin = 0.01
+        if zeta is None:        
+            zeta = 1e-2
+            
+        nb_pre = 5000
+        max_evt = 3000       
+        if IRC:
+            logger.info('merging collinear with dr_min=' + str(dRmin) + ', removing soft with zeta_min=' + str(zeta))
+        else:
+            logger.info('fixing jet numbers in each bin...')
+        for key in jet_particle:
+            for case in jet_particle[key]:
+                pp = jet_particle[key][case]
+                if IRC:                
+                    pp = IRC_safe_parallel(pp[:nb_pre].astype(np.float32), dRmin=dRmin, zeta=zeta, near=True)                
+                else:
+                    pp = pp[:nb_pre].astype(np.float32)
+                jet_particle[key][case] = pp[np.count_nonzero(pp[:, :, 0], axis=1)>=3][:max_evt]
+                jet_particle[key][case][np.isnan(jet_particle[key][case])] = 0                
+                logger.info(key + '' + str(case) + ': ' + str(len(jet_particle[key][case])))
+                
+        logger.info('computing beta...')
+        antikt_beta = {}
+        for i in range(6):
+            a, b = 50+i*50, 100+i*50
+            antikt_beta[str(a)+'_'+str(b)] = {}
+            for case in jet_particle[str(a)+'_'+str(b)]:
+                p4 = get_p4(jet_particle[str(a)+'_'+str(b)][case])            
+                antikt_beta[str(a)+'_'+str(b)][case] = beta_parallel(p4, bins=bins, cutRange=cutRange, 
+                                                                    logSpace=logSpace, betatype=betatype)
+        antikt_beta['all'] = {}
+        keys = ['q', 'g']
+        for i in range(2):
+            antikt_beta['all'][keys[i]] = np.concatenate((
+                antikt_beta['100_150'][keys[i]],
+                antikt_beta['150_200'][keys[i]], antikt_beta['200_250'][keys[i]],
+                antikt_beta['250_300'][keys[i]], antikt_beta['300_350'][keys[i]]
+            ), axis=0) 
+            
+        param_dic = {
+            'IRC': IRC,
+            'cutRange': cutRange,
+            'bins': bins,
+            'logSpace': logSpace,
+            'betatype': betatype
+        }    
+        return antikt_beta, param_dic
+
+
+
+
 class ML_data:
 
     def __init__(self, dRmin=1e-2, zeta=1e-2, zeta_type='zeta', R=0.6):
