@@ -195,8 +195,71 @@ class Trainer:
             self._train_iter(idx)    
 
 
-class Evaluater:
+class Evaluater(Trainer):
+    '''
+    evaluate model for 5 folds trainings
+    '''
     def __init__(self):
-        super().__init__()            
+        super().__init__()         
+        self.device = self.loader_params['device']    
+        self.loader_params['shuffle'] = False
+        self.path2net = '/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
+        if self.use_PersNet:
+            self.path2net = os.path.join(self.path2net, 'PersNet')
+        else:
+            self.path2net = os.path.join(self.path2net, 'fcn')
+        self.net_name = os.path.join(self.path2net, self.train_params['name2save'])
 
+    def _evaluate_net(self, net, loader):
+        
+        net = net.to(self.device)  
+        
+        outputs, labels = [], []
+
+        for i, data in enumerate(loader):
+            for d_id in range(len(data)):
+                data[i] = data[i].to(self.device)
+            
+            label = data[-1]
+            
+            if len(data) == 2:
+                output = net(data[0])
+            if len(data) == 5:
+                output = net(data[0], data[1], data[2], data[3])
+
+            labels.append(label.detach().cpu().numpy())
+            outputs.append(output.detach().cpu().numpy())
+        
+        try:
+            labels = np.concatenate(labels, axis=0)
+            outputs = np.concatenate(outputs, axis=0)
+        except:
+            labels = np.concatenate(labels)
+            outputs = np.concatenate(outputs)
+        return outputs.reshape(-1), labels.reshape(-1)
     
+    def _idx_eva(self, idx):
+        if self.use_PersNet:
+            net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
+        else:
+            net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
+
+        weight2load = self.net_name + + '_run' + str(idx) + '.pt'
+        net.load_state_dict(torch.load(weight2load))
+
+        JD = JetData(train=False, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
+        loader  = JD.data_loader()
+        y_pred, y_true = self._evaluate_net(net, loader)
+        return y_pred, y_true
+
+    def evaluate(self):
+        '''
+        return average output scores for 5 folds, labels and AUC score
+        ''' 
+        y_preds = []
+        for idx in range(5):
+            y_pred, y_true = self._idx_eva(idx)
+            y_preds.append(y_preds)
+        y_preds = np.array(y_preds).mean(axis=0)
+        AUC = roc_auc_score(y_true, y_preds)
+        return y_preds, y_true, AUC
