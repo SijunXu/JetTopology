@@ -1,7 +1,7 @@
 import torch
 from torch.utils import data
 import numpy as np
-import pickle
+import pickle5 as pickle
 
 
 class TableDataset(data.Dataset):

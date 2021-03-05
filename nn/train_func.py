@@ -1,7 +1,8 @@
 import torch
 import time
 import os 
-import pickle
+#import pickle
+import pickle5 as pickle
 
 import numpy as np
 from sklearn.metrics import roc_auc_score, roc_curve
@@ -201,7 +202,7 @@ class Evaluater(Trainer):
     '''
     def __init__(self, name2load, layers, indim=50, verbose=False, loader_params=None, train_params=None, use_PersNet=False):
         super(Evaluater, self).__init__(name2load, layers, indim, verbose, loader_params, train_params, use_PersNet)         
-        self.device = self.train_params['device']    
+        self.device = torch.device(self.train_params['device'])
         self.loader_params['shuffle'] = False
         self.path2net = '/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
         if self.use_PersNet:
@@ -213,12 +214,13 @@ class Evaluater(Trainer):
     def _evaluate_net(self, net, loader):
         
         net = net.to(self.device)  
-        
+        net.eval()
+
         outputs, labels = [], []
 
         for i, data in enumerate(loader):
             for d_id in range(len(data)):
-                data[i] = data[i].to(self.device)
+                data[d_id] = data[d_id].to(self.device).float()
             
             label = data[-1]
             
@@ -238,7 +240,7 @@ class Evaluater(Trainer):
             outputs = np.concatenate(outputs)
         return outputs.reshape(-1), labels.reshape(-1)
     
-    def _idx_eva(self, idx):
+    def _idx_eva(self, idx, loader):
         if self.use_PersNet:
             net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
         else:
@@ -246,9 +248,7 @@ class Evaluater(Trainer):
 
         weight2load = self.net_name + '_run' + str(idx) + '.pt'
         net.load_state_dict(torch.load(weight2load))
-
-        JD = JetData(train=False, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
-        loader  = JD.data_loader()
+        
         y_pred, y_true = self._evaluate_net(net, loader)
         return y_pred, y_true
 
@@ -256,10 +256,24 @@ class Evaluater(Trainer):
         '''
         return average output scores for 5 folds, labels and AUC score
         ''' 
+        JD = JetData(train=False, name2load=self.name2load, loader_params=self.loader_params)
+        if self.use_PersNet:
+            loader = JD.pers_data_loader()
+        else:
+            loader = JD.data_loader()
+    
+        #print('data loaded')
         y_preds = []
         for idx in range(5):
-            y_pred, y_true = self._idx_eva(idx)
-            y_preds.append(y_preds)
-        y_preds = np.array(y_preds).mean(axis=0)
+            print('evaluating {:} th fold'.format(idx))
+            y_pred, y_true = self._idx_eva(idx, loader)
+            y_preds.append(y_pred)
+
+        y_preds = np.array(y_preds)        
+        #print(y_preds.shape)
+        y_preds = np.average(y_preds, axis=0)   
+        #print(y_preds.shape)
+        #print(y_true.shape)
+        #print('computing AUC...')
         AUC = roc_auc_score(y_true, y_preds)
         return y_preds, y_true, AUC

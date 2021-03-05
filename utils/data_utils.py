@@ -2,7 +2,8 @@ import os
 import numpy as np
 from tqdm import tqdm
 import awkward
-import pickle
+#import pickle
+import pickle5 as pickle
 
 from ..topology import ML_JetPersistance, JetPersistance
 from . import get_p4, round_phi, IRC_cut
