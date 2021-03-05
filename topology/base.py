@@ -49,6 +49,19 @@ def createTINgraph(points, addVirtual=False):
     return graph
 
 
+def create_kNN_graph(dist, k=3):
+    edges = set()
+    for i in range(len(dist)):
+        mask = [i!=i_col for i_col in range(len(dist))]
+        dist_i = dist[i, mask]
+        kNN_idx = np.argpartition(dist_i, k)[:k]
+        for idx in kNN_idx:
+            edges.add( (i, idx) )        
+    graph = nx.Graph(list(edges))
+    return graph
+    
+        
+
 def get_vor_area(points, R=0.4, n_estimates=500000):
 
     r'''

@@ -17,14 +17,16 @@ class RawData:
     '''
     def __init__(self, 
     fname='pyhtia_qg_antikt_jetparticle_06_v2.npz',
-    path2data='/home/sijun/projects/Topology@Collider/jetTopo/data' 
+    path2data='/home/sijun/projects/Topology@Collider/jetTopo/data',
+    nb_data=None
     ):
         '''
-        get 
+        get q/g data for [100, 350] GeV for 5 bins, for anti-kt Pythia, CA Pythia and anti-kt Herwig data, take the first `nb_data` data
         '''
         super().__init__()
         self.path2data = path2data
         self.fname = fname
+        self.nb_data = nb_data
 
     def get_data(self):
         
@@ -141,9 +143,14 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked        
-            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))                
-        return jet_particle
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))  
 
+        if self.nb_data:
+            for key in jet_particle:
+                for case in jet_particle[key]:
+                    jet_particle[key][case] = jet_particle[key][case][:nb_data]
+
+        return jet_particle
 
 
 
