@@ -155,7 +155,8 @@ class RawData:
 
 
 #from ..topology import ML_JetPersistance
-import ..topology
+#import ..topology
+from JetTopology import topology
 
 class ML_data:    
 
