@@ -106,7 +106,7 @@ class IRC_cut:
         remove soft particles with pT / pT_jet less than zeta_min
         '''
         jet_pt = X_4p.sum().pt
-        return X_4p[ X_4p.pt / jet_pt >= zeta_min ]  
+        return X_4p[ X_4p.pt / jet_pt > zeta_min ]  
     
     #@staticmethod
     def _IRC_safe(self, X_4p, dRmin=0.01, zeta=5e-3, soft=False, near=False, max_par=200):
@@ -129,7 +129,7 @@ class IRC_cut:
 
         X_4p = self._remove_soft(X_4p, zeta)
         nb_par = len(X_4p)
-        jet_particle = np.zeros((max_par, 4), dtype=np.float64)
+        jet_particle = np.zeros((max_par, 4), dtype=np.float32)
         jet_particle[:nb_par] = np.vstack((X_4p.pt, X_4p.eta, X_4p.phi, X_4p.mass)).T
         return jet_particle    
         # return X_4p
