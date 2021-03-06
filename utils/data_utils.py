@@ -7,8 +7,8 @@ import pickle5 as pickle
 
 from . import get_p4, round_phi, IRC_cut
 
-# import logging
-# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class RawData:
     '''
