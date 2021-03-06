@@ -40,7 +40,7 @@ class RawData:
             jet_type = 2
         
         logger = logging.getLogger(__name__)
-        logger.info('processing data file: ' + fname)
+        logger.info('processing data file: ' + self.fname)
 
         jet_particle = {}
         data_particle = {}
