@@ -37,8 +37,8 @@ class RawData:
             jet_type = 1
         elif self.fname == 'herwig_qg_antikt_jetparticle_06_v2.npz':
             jet_type = 2        
-        # logger = logging.getLogger(__name__)
-        # logger.info('processing data file: ' + self.fname)        
+        logger = logging.getLogger(__name__)
+        logger.info('processing data file: ' + self.fname)        
         jet_particle = {}
         data_particle = {}
         for key in data:
@@ -48,7 +48,7 @@ class RawData:
         for key in data:
             data_particle_4p[key] = get_p4(data_particle[key])       
             
-        # logger.info('binning q-g data into 100-350 GeV bins...')     
+        logger.info('binning q-g data into 100-350 GeV bins...')     
 
         jet_particle = {}
         keys = ['q', 'g']
@@ -65,7 +65,7 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
-            # logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
 
         (a, b) = (100, 150)
         jet_particle[str(a)+'_'+str(b)] = {}
@@ -80,7 +80,7 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
-            # logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
 
         (a, b) = (150, 200)
         jet_particle[str(a)+'_'+str(b)] = {}    
@@ -95,7 +95,7 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
-            # logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
 
         (a, b) = (200, 250)
         jet_particle[str(a)+'_'+str(b)] = {}    
@@ -110,7 +110,7 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
-            # logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
 
         (a, b) = (250, 300)
         jet_particle[str(a)+'_'+str(b)] = {}
@@ -125,7 +125,7 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked
-            # logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))
 
         (a, b) = (300, 350)
         jet_particle[str(a)+'_'+str(b)] = {}
@@ -140,7 +140,7 @@ class RawData:
             masked = data_particle[fnames[i]][(jet_4p.pt>=a)*(jet_4p.pt<b)]
             masked[np.isnan(masked)] = 0
             jet_particle[str(a)+'_'+str(b)][keys[i]] = masked        
-            # logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))  
+            logger.info(str(a)+'_'+str(b)+' '+keys[i]+' :'+str(len(masked)))  
 
         if self.nb_data:
             for key in jet_particle:
