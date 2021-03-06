@@ -154,7 +154,8 @@ class RawData:
 
 
 
-from ..topology import ML_JetPersistance
+#from ..topology import ML_JetPersistance
+import ..topology
 
 class ML_data:    
 
@@ -246,7 +247,7 @@ class ML_data:
         train_b0_pair = {}
         train_b1_pair = {}
         for key in train_jet_particle['all']:            
-            pers_pairs = ML_JetPersistance().get_ml_inputs(
+            pers_pairs = topology.ML_JetPersistance().get_ml_inputs(
                 get_p4(train_jet_particle['all'][key]), 
                 zeta_type=self.zeta_type, 
                 R=self.R
@@ -256,7 +257,7 @@ class ML_data:
         test_b0_pair = {}
         test_b1_pair = {}
         for key in test_jet_particle['all']:
-            pers_pairs = ML_JetPersistance().get_ml_inputs(
+            pers_pairs = topology.ML_JetPersistance().get_ml_inputs(
                 get_p4(test_jet_particle['all'][key]), 
                 zeta_type=self.zeta_type, 
                 R=self.R
