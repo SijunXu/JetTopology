@@ -147,6 +147,38 @@ class Betti:
                     break
         beta[1] = nb_cc_bry
         return beta  
+    
+    def _filtering_kNN_beta(self, X_4p, k=2, p=0, **sample_params):
+        r'''
+        compute b_0 for kNN based graph for superset
+        zeta = pT / pT_jet
+        '''
+        cuts = self._sampling(**sample_params)
+        n_points = len(X_4p)
+        bins = sample_params['bins']
+        beta = np.zeros(bins)
+        dist = compute_dist(X_4p, p=p)
+        graph = create_kNN_graph(dist, k=k)
+
+        zeta = X_4p.pt / X_4p.sum().pt
+
+        for i, cc in enumerate(cuts):
+            nodes2del = list(np.arange(n_points)[zeta > cc])
+            if i == 0:
+                tmp_nodes2del = nodes2del
+                H = graph.copy()
+                H.remove_nodes_from(nodes2del)
+                beta[i] = nx.number_connected_components(H)
+            else:
+                if (len(tmp_nodes2del)==len(nodes2del)):
+                    beta[i] = beta[i-1]
+                    tmp_nodes2del = nodes2del
+                else:
+                    H = graph.copy()
+                    H.remove_nodes_from(nodes2del)                
+                    beta[i] = nx.number_connected_components(H)
+                    tmp_nodes2del = nodes2del
+        return beta                
 
     def _filtering_zeta(self, graph, X_4p, zeta_type='zeta', case='dual', R=0.6, **sample_params):
         r'''
@@ -230,3 +262,10 @@ class Betti:
         result = make_parallel(self._compute_beta, n_jobs=n_jobs, zeta_type=zeta_type, R=R, **sample_params)(X_4ps)
         return np.array(result)
 
+    def compute_kNN_beta(self, X_4ps, k=2, p=0, n_jobs=-1, **sample_params):
+        r'''
+        computer betti numbers for a list of jets with 4-momenta for superset
+        '''
+        result = make_parallel(self._filtering_kNN_beta, n_jobs=n_jobs, k=k, p=p, **sample_params)(X_4ps)
+        return np.array(result)
+    
