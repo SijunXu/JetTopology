@@ -296,20 +296,20 @@ class ML_data:
 
     def get_kNN_ml_data(self, name2save=None):
         train_jet_particle, test_jet_particle = self.prepare_ml_data()
-        ## compute persistence information
+        ## compute persistence information for b0 features
         train_b0_pair = {}
         for key in train_jet_particle:            
             train_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(
                 get_p4(train_jet_particle[key]), 
-                k=k, 
-                p=p)
+                k=self.k, 
+                p=self.p)
 
         test_b0_pair = {}        
         for key in test_jet_particle:
             test_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(
                 get_p4(test_jet_particle[key]), 
-                k=k,
-                p=p)            
+                k=self.k,
+                p=self.p)            
 
         ml_data = {
             'train_b0': train_b0_pair,            
