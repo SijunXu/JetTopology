@@ -145,7 +145,7 @@ class RawData:
         if self.nb_data:
             for key in jet_particle:
                 for case in jet_particle[key]:
-                    jet_particle[key][case] = jet_particle[key][case][:nb_data]
+                    jet_particle[key][case] = jet_particle[key][case][:self.nb_data]
 
         return jet_particle
 
