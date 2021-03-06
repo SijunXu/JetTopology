@@ -5,7 +5,7 @@ import awkward
 #import pickle
 import pickle5 as pickle
 
-from ..topology import ML_JetPersistance, JetPersistance
+
 from . import get_p4, round_phi, IRC_cut
 
 import logging
@@ -154,8 +154,9 @@ class RawData:
 
 
 
+from ..topology import ML_JetPersistance
 
-class ML_data:
+class ML_data:    
 
     def __init__(self, dRmin=1e-2, zeta=1e-2, zeta_type='zeta', R=0.6):
         super().__init__()

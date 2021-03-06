@@ -3,8 +3,6 @@ import networkx as nx
 from scipy.spatial import Voronoi, voronoi_plot_2d, Delaunay, ConvexHull, distance_matrix
 from scipy.spatial import cKDTree
 
-from ..utils import make_parallel, round_points
-
 
 '''
 A pipline for doing Topological Data Analysis with inputs of a set of particles in a jet
@@ -110,6 +108,8 @@ def get_vor_area(points, R=0.4, n_estimates=500000):
     area[~unique_index] += 1e-5
     return area
 
+
+from ..utils import make_parallel, round_points
 
 class Betti:
 
