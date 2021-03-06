@@ -163,7 +163,7 @@ class Betti:
         zeta = X_4p.pt / X_4p.sum().pt
 
         for i, cc in enumerate(cuts):
-            nodes2del = list(np.arange(n_points)[zeta > cc])
+            nodes2del = list(np.arange(n_points)[zeta <= cc])
             if i == 0:
                 tmp_nodes2del = nodes2del
                 H = graph.copy()
