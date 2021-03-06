@@ -3,8 +3,8 @@ from collections import OrderedDict
 import networkx as nx
 from scipy.spatial import Voronoi, voronoi_plot_2d, Delaunay, ConvexHull, distance_matrix
 
-from .base import createTINgraph, get_vor_area
-from ..utils import make_parallel, round_points
+from JetTopology.topology.base import createTINgraph, get_vor_area, create_kNN_graph, compute_dist
+from JetTopology.utils import make_parallel, round_points
 
 
 class JetPersistance:
@@ -342,6 +342,130 @@ class ML_JetPersistance(JetPersistance):
                 return ml_inputs
         return []            
 
+    def _get_kNN_b0_ml_inputs(self, jet_4p, k=2, p=0, show_history=False):
+        '''
+        compute ml inputs for connected components as well the jet branches evolving:
+
+        if `show_history=False`:
+            returns: inputs: [ log(b), log(d), idx_merged, log(HT_branch), log(HT_branch^merged) ] for all pairs
+
+        if `show_history=True`:
+            returns: `history`
+        '''
+
+        jet_pt = jet_4p.sum().pt
+        jet_ht = np.sum(jet_4p.pt)
+        points = np.vstack((jet_4p.eta, jet_4p.phi)).T
+        points = round_points(points)
+        ## descending sorted w.r.t zeta
+        zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+        idx = np.argsort(zeta)[::-1]       
+
+        zeta = zeta[idx]
+        jet_4p = jet_4p[idx]        
+
+        ## create kNN graph
+        dist = compute_dist(jet_4p, p=p)
+        graph = create_kNN_graph(dist, k=k)
+
+        ## record particles of each connected component at each zeta cut
+        cut_history = OrderedDict() 
+        for i, cc in enumerate(zeta):
+            ## super-level graph
+            nodes2del = list(np.arange(len(jet_4p))[ (i+1): ])
+            H = graph.copy()
+            H.remove_nodes_from(nodes2del)
+            comp_ll = [c for c in nx.connected_components(H)]            
+            cut_history[cc] = OrderedDict()
+            if len(comp_ll) > 0:
+                for compset in comp_ll:
+                    compset = sorted(list(compset))                 
+                    cut_history[cc][compset[0]] = compset
+
+        ## get components for each jet branch and persistence diagrams
+        jet_branches = OrderedDict()
+        persistence = OrderedDict()           
+        for i, cc in enumerate(cut_history.keys()):
+            for key in cut_history[cc]:
+                compset = cut_history[cc][key]
+                if compset[0] not in jet_branches:
+                    jet_branches[compset[0]] = []                    
+                jet_branches[compset[0]].append(compset)
+                if compset[0] not in persistence:
+                    if len(zeta) == 1:
+                        persistence[compset[0]] = [ cc, cc ]
+                    if i < len(zeta) - 1:
+                        persistence[compset[0]] = [ cc, zeta[i + 1] ]
+                    else:
+                        persistence[compset[0]] = [ cc, cc ]
+                elif compset[0] in persistence:
+                    if i < len(zeta) - 1:
+                        persistence[compset[0]][1] = zeta[i+1]
+                    else:
+                        persistence[compset[0]][1] = cc
+
+        ## find the idx of the connected component that the this one merged to.
+        id_merge = OrderedDict()
+        for i, cc in enumerate(zeta):
+            if i < (len(zeta) - 1):
+                for key in cut_history[cc]:
+                    if key not in cut_history[ zeta[i+1] ]:
+                        for key_i in cut_history[ zeta[i+1] ]:
+                            if int(key) in cut_history[ zeta[i+1] ][key_i]:
+                                id_merge[key] = key_i
+        id_merge[0] = 0
+
+        if show_history:
+            history = {}
+            history['cut_history'] = cut_history
+            history['persistence'] = persistence
+            history['id_merge'] = id_merge
+            return history
+
+        else:
+            ml_inputs = []        
+            if len(zeta) == 1:
+                b, d = np.log(zeta[0]), np.log(zeta[0])
+                id_s, id_m = 0, 0
+                HT_s, HT_m = 1., 1.
+                ml_inputs.append(np.array([b, d, id_m, HT_s, HT_m]))   
+                return ml_inputs
+
+            for key in persistence:
+                ## log(birth), log(death)
+                b, d = np.log(persistence[key][0]), np.log(persistence[key][1])
+                ## idx for each jet branch and which one it merged to
+                id_s, id_m = list(persistence.keys()).index(key), list(persistence.keys()).index(id_merge[key])                
+                ## compute HT for the branch at the moment it dies and the branch it merged to.
+                HT_s = np.log(np.sum(jet_4p[jet_branches[key][-1]].pt) / jet_ht)
+                merge_cc_idx = int(list(zeta).index(persistence[key][1]) - 1)
+
+                try:
+                    merge_comp = cut_history[zeta[merge_cc_idx]][id_merge[key]]
+                except:
+                    try:
+                        merge_comp = cut_history[zeta[merge_cc_idx + 1]][id_merge[key]]
+                    except:
+                        for cc in zeta[::-1]:
+                            ## find the hardest moment that the branches merged to 
+                            if id_merge[key] in cut_history[cc]:
+                                merge_comp = cut_history[cc][id_merge[key]]
+                if not merge_comp:
+                    ## if not find the component that it merges to, assign this branch merges to the `0` branch 
+                    ## and find the connected components at the death moment
+                    try:
+                        merge_comp = cut_history[persistence[key][1]][0]
+                    except:
+                        merge_comp = [0]                        
+                HT_m = np.log(np.sum(jet_4p[merge_comp].pt) / jet_ht)
+                ml_inputs.append(np.array([b, d, id_m, HT_s, HT_m]))  
+                   
+            ml_inputs = np.array(ml_inputs)
+            if len(ml_inputs) > 1:
+                return ml_inputs[np.argsort(ml_inputs[:, 0] - ml_inputs[:, 1])[::-1]]
+            else:
+                return ml_inputs    
+
     #@staticmethod
     def get_ml_inputs(self, jet_4ps, case=['b0', 'b1'], zeta_type='zeta', R=0.6, n_jobs=-1):
         '''
@@ -353,5 +477,12 @@ class ML_JetPersistance(JetPersistance):
                 result[key] = make_parallel(self._get_b0_ml_inputs, n_jobs=n_jobs, zeta_type=zeta_type, R=R)(jet_4ps)
             elif key == 'b1':
                 result[key] = make_parallel(self._get_b1_ml_inputs, n_jobs=n_jobs, zeta_type=zeta_type, R=R)(jet_4ps)
+        return result
+
+    def get_kNN_ml_inputs(self, jet_4ps, k=2, p=0, n_jobs=-1):
+        '''
+        compute ml inputs parallelly for kNN based graph
+        '''
+        result = make_parallel(self._get_kNN_b0_ml_inputs, n_jobs=n_jobs, k=k, p=p)(jet_4ps)          
         return result
         

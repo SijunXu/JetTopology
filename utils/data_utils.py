@@ -157,17 +157,33 @@ from JetTopology import topology
 
 class ML_data:    
 
-    def __init__(self, dRmin=1e-2, zeta=1e-2, zeta_type='zeta', R=0.6):
+    def __init__(
+        self, 
+        dRmin=1e-2, 
+        zeta=1e-2, 
+        zeta_type='zeta', 
+        R=0.6, 
+        graph_type='DT', 
+        k=2, 
+        p=0,
+        path2data='/home/sijun/projects/Topology@Collider/jetTopo/data'
+        ):
         super().__init__()
+        self.path2data = path2data
+
         self.dRmin = dRmin
         self.zeta = zeta
         self.zeta_type = zeta_type
         self.R = R
+        self.graph_type = graph_type
+        ## for kNN based graph
+        self.k = k
+        self.p = p
 
-    def prepare_ml_data(self, name2save=None):
+    def prepare_ml_data(self):
 
         ## load raw data
-        path2data = '/home/sijun/projects/Topology@Collider/jetTopo/data'
+        path2data = self.path2data
         data1 = np.load(os.path.join(path2data, 'pyhtia_qg_antikt_jetparticle_06_run11.npz'))
         data2 = np.load(os.path.join(path2data, 'pyhtia_qg_antikt_jetparticle_06_run12.npz'))
         names1 = list(data1.keys())
@@ -240,13 +256,16 @@ class ML_data:
                 test_jet_particle['150_200'][key], test_jet_particle['200_250'][key],
                 test_jet_particle['250_300'][key], test_jet_particle['300_350'][key]
             ), axis=0)   
-            
+        return train_jet_particle['all'], test_jet_particle['all']
+
+    def get_DT_ml_data(self, name2save=None):
+        train_jet_particle, test_jet_particle = self.prepare_ml_data()
         ## compute persistence information
         train_b0_pair = {}
         train_b1_pair = {}
-        for key in train_jet_particle['all']:            
+        for key in train_jet_particle:            
             pers_pairs = topology.ML_JetPersistance().get_ml_inputs(
-                get_p4(train_jet_particle['all'][key]), 
+                get_p4(train_jet_particle[key]), 
                 zeta_type=self.zeta_type, 
                 R=self.R
                 )
@@ -254,9 +273,9 @@ class ML_data:
 
         test_b0_pair = {}
         test_b1_pair = {}
-        for key in test_jet_particle['all']:
+        for key in test_jet_particle:
             pers_pairs = topology.ML_JetPersistance().get_ml_inputs(
-                get_p4(test_jet_particle['all'][key]), 
+                get_p4(test_jet_particle[key]), 
                 zeta_type=self.zeta_type, 
                 R=self.R
                 )
@@ -267,6 +286,34 @@ class ML_data:
             'train_b1': train_b1_pair,            
             'test_b0': test_b0_pair,
             'test_b1': test_b1_pair
+        }
+        
+        if not name2save:
+            return ml_data
+        else:
+            with open(name2save, 'wb') as handle:
+                pickle.dump(ml_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_kNN_ml_data(self, name2save=None):
+        train_jet_particle, test_jet_particle = self.prepare_ml_data()
+        ## compute persistence information
+        train_b0_pair = {}
+        for key in train_jet_particle:            
+            train_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(
+                get_p4(train_jet_particle[key]), 
+                k=k, 
+                p=p)
+
+        test_b0_pair = {}        
+        for key in test_jet_particle:
+            test_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(
+                get_p4(test_jet_particle[key]), 
+                k=k,
+                p=p)            
+
+        ml_data = {
+            'train_b0': train_b0_pair,            
+            'test_b0': test_b0_pair,            
         }
         
         if not name2save:
