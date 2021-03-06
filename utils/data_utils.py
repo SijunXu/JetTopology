@@ -37,12 +37,9 @@ class RawData:
         elif self.fname == 'pyhtia_qg_CA_jetparticle_06_v2.npz':
             jet_type = 1
         elif self.fname == 'herwig_qg_antikt_jetparticle_06_v2.npz':
-            jet_type = 2
-        
+            jet_type = 2        
         logger = logging.getLogger(__name__)
-        
-        logger.info('processing data file: ' + self.fname)
-
+        logger.info('processing data file: ' + self.fname)        
         jet_particle = {}
         data_particle = {}
         for key in data:
