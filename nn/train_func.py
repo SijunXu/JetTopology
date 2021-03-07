@@ -215,11 +215,11 @@ class Evaluater(Trainer):
     '''
     evaluate model for 5 folds trainings
     '''
-    def __init__(self, name2load, layers, indim=50, verbose=False, loader_params=None, train_params=None, use_PersNet=False):
-        super(Evaluater, self).__init__(name2load, layers, indim, verbose, loader_params, train_params, use_PersNet)         
+    def __init__(self, path2net, name2load, layers, indim=50, graph_type='DT', verbose=False, loader_params=None, train_params=None, use_PersNet=False):
+        super(Evaluater, self).__init__(name2load, layers, indim, graph_type, verbose, loader_params, train_params, use_PersNet)         
         self.device = torch.device(self.train_params['device'])
         self.loader_params['shuffle'] = False
-        self.path2net = '/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
+        self.path2net = path2net #'/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
         if self.use_PersNet:
             self.path2net = os.path.join(self.path2net, 'PersNet')
         else:
@@ -241,7 +241,9 @@ class Evaluater(Trainer):
             
             if len(data) == 2:
                 output = net(data[0])
-            if len(data) == 5:
+            elif len(data) == 3:
+                output = net(data[0], data[1])
+            elif len(data) == 5:
                 output = net(data[0], data[1], data[2], data[3])
 
             labels.append(label.detach().cpu().numpy())
@@ -257,7 +259,10 @@ class Evaluater(Trainer):
     
     def _idx_eva(self, idx, loader):
         if self.use_PersNet:
-            net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
+            if self.graph_type == 'DT':
+                net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
+            elif self.graph_type == 'kNN':
+                net = PersNetkNN(b0_dim=5, **self.layers)
         else:
             net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
 
@@ -273,9 +278,15 @@ class Evaluater(Trainer):
         ''' 
         JD = JetData(train=False, name2load=self.name2load, loader_params=self.loader_params)
         if self.use_PersNet:
-            loader = JD.pers_data_loader()
+            if self.graph_type == 'DT':
+                loader = JD.pers_data_loader()
+            elif self.graph_type == 'kNN':
+                loader = JD.kNN_pers_data_loader()
         else:
-            loader = JD.data_loader()
+            if self.graph_type == 'DT':
+                loader = JD.data_loader()
+            elif self.graph_type == 'kNN':
+                loader = JD.kNN_data_loader()
     
         #print('data loaded')
         y_preds = []
