@@ -9,7 +9,7 @@ def poolcontext(*args, **kwargs):
     yield pool
     pool.terminate()
 
-def make_parallel(func, n_jobs=-1, **kwargs):
+def make_parallel(func, n_jobs=-1, return_data=True, **kwargs):
     r'''
     parallized for heavy computation for a function `func` with arguments `kwargs`. 
 
@@ -27,8 +27,12 @@ def make_parallel(func, n_jobs=-1, **kwargs):
         
     @wraps(func)
     def wrapper(lst):
-        with poolcontext(processes=cores) as pool:
-            result = pool.map(partial(func, **kwargs), lst)
-        return result
+        if return_data:
+            with poolcontext(processes=cores) as pool:
+                result = pool.map(partial(func, **kwargs), lst)
+            return result
+        else:
+            with poolcontext(processes=cores) as pool:
+                pool.map(partial(func, **kwargs), lst)        
 
     return wrapper

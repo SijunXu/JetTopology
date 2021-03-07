@@ -252,9 +252,10 @@ class JetData:
                 X[:shape_a[0], :shape_a[1]] = a
                 X[shape_a[0]:, :shape_b[1]] = b
                 return X 
+
         feats = []
         for key in ['q', 'g']:            
-            feats.append(self._cat_persnet_feat(b0[key])            
+            feats.append( self._cat_persnet_feat(b0[key]) )
         b0_feat = pad_cat(feats[0][0], feats[1][0])        
         b0_weight = pad_cat(feats[0][1], feats[1][1])
         
