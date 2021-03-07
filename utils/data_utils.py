@@ -150,7 +150,6 @@ class RawData:
         return jet_particle
 
 
-
 #from ..topology import ML_JetPersistance
 #import ..topology
 from JetTopology import topology
@@ -296,7 +295,7 @@ class ML_data:
 
     def get_kNN_ml_data(self, name2save=None):
         train_jet_particle, test_jet_particle = self.prepare_ml_data()
-        ## compute persistence information for b0 features
+        `## compute persistence information for b0 features
         train_b0_pair = {}
         for key in train_jet_particle:            
             train_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(

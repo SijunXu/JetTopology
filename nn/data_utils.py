@@ -41,6 +41,24 @@ class PersDataset(data.Dataset):
         return len(self.target)
 
 
+class PerskNNDataset(data.Dataset):
+    '''
+    Dataset for PersNet for kNN based graph
+    '''
+    def __init__(self, b0, b0_weight, target):        
+        
+        shape = b0_weight.shape         
+        b0_weight = b0_weight.reshape((shape[0], shape[1], 1))
+        target = np.reshape(target, (-1, 1)).astype(np.float32)
+
+        self.b0, self.b0_weight, self.target = map(torch.from_numpy, (b0, b0_weight, target))
+
+    def __getitem__(self, index):
+        return self.b0[index], self.b0_weight[index], self.target[index]
+
+    def __len__(self):
+        return len(self.target)
+
 
 class JetData:    
     r'''
@@ -74,6 +92,15 @@ class JetData:
             return pers['train_b0'], pers['train_b1']
         else:
             return pers['test_b0'], pers['test_b1']
+    
+    def _load_kNN_data(self):
+        with open(self.name2load, 'rb') as handle:
+            pers = pickle.load(handle)
+        if self.train:
+            return pers['train_b0']
+        else:
+            return pers['test_b0']
+        
 
     def _cat2table(self, b0, b1):
         r'''
@@ -132,6 +159,25 @@ class JetData:
         b1_weight = b1_feat[:, :, 1] - b1_feat[:, :, 0]
         return b0_feat, b1_feat, b0_weight, b1_weight
 
+    def _cat_kNN_persnet_feat(self, b0,max_b0=None):
+        n_jets = len(b0)        
+        if max_b0 is None:
+            max_b0 = 0
+            for p0 in b0:
+                max_b0 = max(len(p0), max_b0)        
+        
+        b0_feat = np.zeros((n_jets, max_b0, 5))
+        b0_weight = np.zeros((n_jets, max_b0))
+
+        for i, p0 in enumerate(b0):
+            n_b0 = len(p0)
+            if n_b0 == 1:
+                b0_feat[i, 0] = list(p0[0])
+            elif n_b0 > 1:
+                b0_feat[i, :n_b0] = p0 
+        ## weight = log(b) - log(d)
+        b0_weight = b0_feat[:, :, 0] - b0_feat[:, :, 1]        
+        return b0_feat, b0_weight
 
     
     def _train_val_split(self, train_data, kfold=5, idx=0):
@@ -188,6 +234,32 @@ class JetData:
         
         y = [1 for _ in range(len(feats[0][0]))] + [0 for _ in range(len(feats[1][0]))]
         return PersDataset(b0_feat, b0_weight, b1_feat, b1_weight, y)
+    
+    def _make_kNN_dataset(self, b0):
+        def pad_cat(a, b):
+            shape_a, shape_b = a.shape, b.shape
+
+            if len(shape_a) == 3:
+                dim_cat = max(shape_a[1], shape_b[1])
+                X = np.zeros((shape_a[0] + shape_b[0], dim_cat, shape_a[-1]))
+                X[:shape_a[0], :shape_a[1]] = a
+                X[shape_a[0]:, :shape_b[1]] = b
+                return X
+
+            elif len(shape_a) == 2:
+                dim_cat = max(shape_a[1], shape_b[1])
+                X = np.zeros((shape_a[0] + shape_b[0], dim_cat))
+                X[:shape_a[0], :shape_a[1]] = a
+                X[shape_a[0]:, :shape_b[1]] = b
+                return X 
+        feats = []
+        for key in ['q', 'g']:            
+            feats.append(self._cat_persnet_feat(b0[key])            
+        b0_feat = pad_cat(feats[0][0], feats[1][0])        
+        b0_weight = pad_cat(feats[0][1], feats[1][1])
+        
+        y = [1 for _ in range(len(feats[0][0]))] + [0 for _ in range(len(feats[1][0]))]
+        return PerskNNDataset(b0_feat, b0_weight, y)
 
 
     def pers_data_loader(self):
@@ -211,6 +283,26 @@ class JetData:
             testset = self._make_dataset(b0, b1)
             test_loader = data.DataLoader(testset, **self.loader_params)
             return test_loader
+    
+    def kNN_pers_data_loader(self):
+        '''
+        get data_loader for PersNet for kNN based graph
+        '''
+        b0 = self._load_kNN_data()
+        if self.train:
+            b0_train, b0_val = self._train_val_split(b0, idx=self.idx)
+            trainset = self._make_kNN_dataset(b0_train) 
+            valset = self._make_kNN_dataset(b0_val)
+
+            train_loader = data.DataLoader(trainset, **self.loader_params)
+            val_loader = data.DataLoader(valset, **self.loader_params)
+            return train_loader, val_loader
+
+        else:
+            testset = self._make_kNN_dataset(b0)
+            test_loader = data.DataLoader(testset, **self.loader_params)
+            return test_loader
+
 
     def data_loader(self):
         b0, b1 = self._load_data()

@@ -52,6 +52,8 @@ def train_model(
             optimizer.zero_grad()
             if len(data) == 2:
                 outputs = model(data[0])
+            elif len(data) == 3:
+                outputs = model(data[0], data[1])
             elif len(data) == 5:
                 outputs = model(data[0], data[1], data[2], data[3])
 
@@ -76,6 +78,8 @@ def train_model(
             target = data[-1]
             if len(data) == 2:
                 outputs = model(data[0])
+            elif len(data) == 3:
+                outputs = model(data[0], data[1])
             elif len(data) == 5:
                 outputs = model(data[0], data[1], data[2], data[3])            
             if i==0:
@@ -118,13 +122,13 @@ def train_model(
     return model, history
 
 
-from . import JetData, fcn_net, PersNet
+from . import JetData, fcn_net, PersNet, PersNetkNN
 
 class Trainer:
     r'''
     train data in 5 folds 
     '''
-    def __init__(self, name2load, layers, indim=50, verbose=False, loader_params=None, train_params=None, use_PersNet=False):
+    def __init__(self, name2load, layers, indim=50, graph_type='DT', verbose=False, loader_params=None, train_params=None, use_PersNet=False):
         r'''
         `train_params`: a dict with key `'folder2save', 'name2save', 'num_epochs', 'device', 'hist_name'`
 
@@ -142,7 +146,7 @@ class Trainer:
         self.indim = indim        
         self.loader_params = loader_params
         self.train_params = train_params
-
+        self.graph_type = graph_type
         self.use_PersNet = use_PersNet
     
     def _train_iter(self, idx):
@@ -153,15 +157,24 @@ class Trainer:
             print('training model with idx = {:d}'.format(idx))
 
         if self.use_PersNet:
-            net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
+            if self.graph_type == 'DT':
+                net = PersNet(b0_dim=5, b1_dim=4, **self.layers)
+            elif self.graph_type == 'kNN':
+                net = PersNetkNN(b0_dim=5, **self.layers)  
         else:
-            net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
+            if self.graph_type == 'DT':
+                net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
 
         JD = JetData(train=True, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
         if self.use_PersNet:
-            train_loader, val_loader = JD.pers_data_loader()
+            if self.graph_type == 'DT':
+                train_loader, val_loader = JD.pers_data_loader()
+            if self.graph_type == 'kNN':
+                train_loader, val_loader = JD.kNN_pers_data_loader()
         else:
-            train_loader, val_loader = JD.data_loader()
+            if self.graph_type == 'DT':
+                train_loader, val_loader = JD.data_loader()
+                
         loaders = { 'train': train_loader, 'val': val_loader}
         criterion = nn.BCELoss()
         optimizer = torch.optim.Adam(

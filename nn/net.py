@@ -46,7 +46,7 @@ class DeepSet(nn.Module):
         out = self.rho(x)
         return out
 
-class PersNet(nn.Module)        :
+class PersNet(nn.Module):
     '''
     input b0 and b1 features, each kind of feature under the transformation of DeepSet, then concatenate for classification 
     '''
@@ -65,3 +65,20 @@ class PersNet(nn.Module)        :
         x = torch.cat([b0_feat, b1_feat], dim=1)
         out = self.classify(self.fc(x))
         return out
+
+class PersNetkNN(nn.Module):
+    '''
+    use information of b0 for classification 
+    '''
+    def __init__(self, b0_dim, b0_phi_layers, b0_rho_layers, fc_layers, BN=True):
+        super(PersNetkNN, self).__init__()
+
+        self.b0_net = DeepSet(indim=b0_dim, phi_layers=b0_phi_layers, b0_rho_layers=b0_rho_layers, BN=BN)
+        self.fc = fcn_net(layers=fc_layers, indim=b0_rho_layers[-1], BN=BN, net_classify=False)
+        self.classify = nn.Sequential(nn.Linear(fc_layers[-1], 1), nn.Sigmoid())
+
+    def forward(self, b0, b0_weight):
+        b0_feat = self.b0_net(b0, b0_weight)                
+        out = self.classify(self.fc(b0_feat))
+        return out
+        
