@@ -162,8 +162,8 @@ class Trainer:
             elif self.graph_type == 'kNN':
                 net = PersNetkNN(b0_dim=5, **self.layers)  
         else:
-            if self.graph_type == 'DT':
-                net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
+            #if self.graph_type == 'DT':
+            net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
 
         JD = JetData(train=True, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
         if self.use_PersNet:
@@ -174,7 +174,9 @@ class Trainer:
         else:
             if self.graph_type == 'DT':
                 train_loader, val_loader = JD.data_loader()
-                
+            elif self.graph_type == 'kNN':
+                train_loader, val_loader = JD.kNN_data_loader()
+
         loaders = { 'train': train_loader, 'val': val_loader}
         criterion = nn.BCELoss()
         optimizer = torch.optim.Adam(

@@ -24,7 +24,8 @@ def make_parallel(func, n_jobs=-1, return_data=True, **kwargs):
 
     if n_jobs == -1:
         cores = multiprocessing.cpu_count()
-        
+    else:
+        cores = n_jobs
     @wraps(func)
     def wrapper(lst):
         if return_data:

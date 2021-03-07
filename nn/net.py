@@ -73,7 +73,7 @@ class PersNetkNN(nn.Module):
     def __init__(self, b0_dim, b0_phi_layers, b0_rho_layers, fc_layers, BN=True):
         super(PersNetkNN, self).__init__()
 
-        self.b0_net = DeepSet(indim=b0_dim, phi_layers=b0_phi_layers, b0_rho_layers=b0_rho_layers, BN=BN)
+        self.b0_net = DeepSet(indim=b0_dim, phi_layers=b0_phi_layers, rho_layers=b0_rho_layers, BN=BN)
         self.fc = fcn_net(layers=fc_layers, indim=b0_rho_layers[-1], BN=BN, net_classify=False)
         self.classify = nn.Sequential(nn.Linear(fc_layers[-1], 1), nn.Sigmoid())
 

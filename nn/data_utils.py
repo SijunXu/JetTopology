@@ -102,15 +102,18 @@ class JetData:
             return pers['test_b0']
         
 
-    def _cat2table(self, b0, b1):
+    def _cat2table(self, b0, b1=None):
         r'''
         input a list of b0 persistence pairs and b1 pairs, concatenate them into arrays         
         for example case of [100, 350] GeV data, we choose first 6 b0 features and first 5 b0 features
         in total 6 * 5 + 5 * 4 = 50 dim, zero padded
         '''
-        max_b0, max_b1 = 6, 5
         n_jets = len(b0)
-        table = np.zeros((n_jets, 50))
+        max_b0, max_b1 = 6, 5
+        if b1 is None:
+            max_b1 = 0
+            b1 = [[] for _ in range(n_jets)]        
+        table = np.zeros((n_jets, int(max_b0 * 5 + max_b1 * 4)))
 
         for i, (p0, p1) in enumerate( zip(b0, b1) ):
             n_b0, n_b1 = len(p0), len(p1)
@@ -255,7 +258,7 @@ class JetData:
 
         feats = []
         for key in ['q', 'g']:            
-            feats.append( self._cat_persnet_feat(b0[key]) )
+            feats.append( self._cat_kNN_persnet_feat(b0[key]) )
         b0_feat = pad_cat(feats[0][0], feats[1][0])        
         b0_weight = pad_cat(feats[0][1], feats[1][1])
         
@@ -303,6 +306,35 @@ class JetData:
             testset = self._make_kNN_dataset(b0)
             test_loader = data.DataLoader(testset, **self.loader_params)
             return test_loader
+    
+    def kNN_data_loader(self):
+        b0 = self._load_kNN_data()
+        if self.train:
+            b0_train, b0_val = self._train_val_split(b0, idx=self.idx)
+            sig_train = self._cat2table(b0_train['q'])
+            bg_train = self._cat2table(b0_train['g'])
+            X_train = np.concatenate((sig_train, bg_train), axis=0)
+            y_train = [1 for _ in range(len(sig_train))] + [0 for _ in range(len(bg_train))]
+
+            sig_val = self._cat2table(b0_val['q'])
+            bg_val = self._cat2table(b0_val['g'])
+            X_val = np.concatenate((sig_val, bg_val), axis=0)
+            y_val = [1 for _ in range(len(sig_val))] + [0 for _ in range(len(bg_val))]
+
+            trainset, valset = TableDataset(X_train, y_train), TableDataset(X_val, y_val)      
+
+            train_loader = data.DataLoader(trainset, **self.loader_params)
+            val_loader = data.DataLoader(valset, **self.loader_params)
+            return train_loader, val_loader
+        else:
+            sig = self._cat2table(b0['q'])
+            bg = self._cat2table(b0['g'])
+            X = np.concatenate((sig, bg), axis=0)
+            y = [1 for _ in range(len(sig))] + [0 for _ in range(len(bg))]
+            testset = TableDataset(X, y)
+            test_loader = data.DataLoader(testset, **self.loader_params)
+            return test_loader     
+
 
 
     def data_loader(self):
