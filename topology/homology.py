@@ -109,16 +109,16 @@ class JetPersistance:
         return np.array( [anchor_dic[key] for key in anchor_dic] )
 
     #@staticmethod
-    def compute_persistence(self, jet_4ps, case=['b0', 'b1'], zeta_type='zeta', R=0.6, n_jobs=-1):
+    def compute_persistence(self, jet_4ps, case=['b0', 'b1'], zeta_type='zeta', R=0.6, n_jobs=-1, **kwargs):
         '''
         compuet persistence diagrams for a list of jet 4-momenta
         '''
         result = {}
         for key in case:
             if key == 'b0':
-                result[key] = make_parallel(self._b0_diagram, n_jobs=n_jobs, zeta_type=zeta_type, R=R)(jet_4ps)
+                result[key] = make_parallel(self._b0_diagram, n_jobs=n_jobs, zeta_type=zeta_type, R=R, **kwargs)(jet_4ps)
             elif key == 'b1':
-                result[key] = make_parallel(self._b1_diagram, n_jobs=n_jobs, zeta_type=zeta_type, R=R)(jet_4ps)
+                result[key] = make_parallel(self._b1_diagram, n_jobs=n_jobs, zeta_type=zeta_type, R=R, **kwargs)(jet_4ps)
         return result
 
     def _PI(self, diagram, pixels=(20, 20)):
