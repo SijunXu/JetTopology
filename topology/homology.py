@@ -14,7 +14,7 @@ class JetPersistance:
     def __init__(self):
         super(JetPersistance, self).__init__()    
 
-    def _b0_diagram(self, jet_4p, zeta_type='zeta', R=0.6):
+    def _b0_diagram(self, jet_4p, zeta_type='zeta', R=0.6, graph_type='DT', k=2, p=0):
 
         r'''
         compute the persistance diagram for connected components 
@@ -36,8 +36,12 @@ class JetPersistance:
         jet_4p = jet_4p[idx]
         points = points[idx]
 
-        ## create DT graph
-        graph = createTINgraph(points)                
+        if graph_type == 'DT':
+            ## create DT graph
+            graph = createTINgraph(points)                
+        elif graph_type == 'kNN':
+            dist = compute_dist(jet_4p, p=p)
+            graph = create_kNN_graph(dist, k=k)        
     
         jet_branches = OrderedDict()
 
