@@ -18,6 +18,6 @@ class JetObs:
         for i in range(len(z)):
             for j in range(len(z)):
                 if i < j:
-                    ang_ij = ((jet_p4[i].eta - jet_p4.[j].eta) ** 2 + (jet_p4[i].phi - jet_p4[j].phi)) ** .5
+                    ang_ij = ((jet_p4[i].eta - jet_p4[j].eta) ** 2 + (jet_p4[i].phi - jet_p4[j].phi)) ** .5
                     ecf += z[i] * z[j] * ang_ij ** beta
         return ecf 
