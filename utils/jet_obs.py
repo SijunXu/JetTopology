@@ -1,4 +1,5 @@
 import numpy as np
+from . import make_parallel
 
 class JetObs:
     '''
@@ -21,3 +22,6 @@ class JetObs:
                     ang_ij = ((jet_p4[i].eta - jet_p4[j].eta) ** 2 + (jet_p4[i].phi - jet_p4[j].phi)) ** .5
                     ecf += z[i] * z[j] * ang_ij ** beta
         return ecf 
+
+    def _Njettiness(self, jet_p4, beta=1):
+        pass
