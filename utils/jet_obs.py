@@ -1,6 +1,9 @@
 import numpy as np
 from . import make_parallel
 
+from pyjet import cluster, DTYPE_PTEPM
+from scipy.spatial import distance_matrix
+
 class JetObs:
     '''
     compute jet substructure observables: generalised angularities, ECFs and N-subjettiness
@@ -23,5 +26,29 @@ class JetObs:
                     ecf += z[i] * z[j] * ang_ij ** beta
         return ecf 
 
-    def _Njettiness(self, jet_p4, beta=1):
-        pass
+    def _cluster_jets(self, jet_p4, n_jet):        
+        pseudojets_input = np.zeros(len(jet_p4), dtype=DTYPE_PTEPM)
+        for i, p4 in jet_p4:
+            pseudojets_input[i]['pT'] = p4.pT
+            pseudojets_input[i]['eta'] = p4.eta
+            pseudojets_input[i]['phi'] = p4.phi
+            pseudojets_input[i]['mass'] = p4.mass
+        sequence = cluster(pseudojets_input, algo='ee_kt')
+        jets = sequence.exclusive_jets(n_jet)
+        return jets
+        
+
+    def _Njettiness(self, jet_p4, N=2, beta=1, R=0.6):
+        '''
+        using exclusive kt to cluster subjets
+        '''
+        jets = self._cluster_jets(jet_p4, n_jet=N)
+        points = np.vstack([jet_p4.eta, jet_p4.phi]).T
+        subjets_pos = np.vstack([jets.eta, jets.phi])
+        dists = distance_matrix(points, subjets_pos) ** beta
+        z = jet_p4.pt / sum(jet_p4.pt)
+        tau  = sum(z * np.min(dists, axis=0))
+        return tau
+        
+
+        
