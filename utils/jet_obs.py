@@ -49,6 +49,15 @@ class JetObs:
         z = jet_p4.pt / sum(jet_p4.pt)
         tau  = sum(z * np.min(dists, axis=0))
         return tau
-        
+
+    def angularity(self, jet_p4s, beta, k, R=0.6):
+        return np.array(make_parallel(self._angularity, beta=beta, k=k, R=R)(jet_p4s))
+
+    def ecf(self, jet_p4s, beta):
+        return np.array(make_parallel(self._2ecf, beta=beta))(jet_p4s)
+
+    def Njettiness(self, jet_p4s, N=2, beta=1, R=0.6):
+        return np.array(make_parallel(self._Njettiness, N=N, beta=beta, R=R))(jet_p4s)
+
 
         
