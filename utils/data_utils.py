@@ -5,7 +5,7 @@ import awkward
 #import pickle
 import pickle5 as pickle
 
-from . import get_p4, round_phi, IRC_cut
+from . import get_p4, round_phi, IRC_cut, JetObs
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -292,6 +292,34 @@ class ML_data:
         else:
             with open(name2save, 'wb') as handle:
                 pickle.dump(ml_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        
+    def get_jet_obs(self, name2save=None):
+        '''
+        compute N-Subjettiness for n=1-6
+        '''
+        train_jet_particle, test_jet_particle = self.prepare_ml_data()
+        train_obs, test_obs = {}, {}
+        Ns = [1, 2, 3, 4, 5, 6]
+        for key in train_jet_particle:
+            taus = []
+            for N in Ns:
+                taus.append(JetObs().Njettiness(get_p4(train_jet_particle[key]), N=N, beta=0.2))
+            train_obs[key] = np.vstack(taus).T
+        for key in test_jet_particle:
+            taus = []
+            for N in Ns:
+                taus.append(JetObs().Njettiness(get_p4(test_jet_particle[key]), N=N, beta=0.2))
+            test_obs[key] = np.vstack(taus).T
+        obs = {
+            'train': train_obs,
+            'test': test_obs
+        }        
+        if not name2save:
+            return obs
+        else:
+            with open(name2save, 'wb') as handle:
+                pickle.dump(obs, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
     def get_kNN_ml_data(self, name2save=None):
         train_jet_particle, test_jet_particle = self.prepare_ml_data()
