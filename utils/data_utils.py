@@ -5,7 +5,8 @@ import awkward
 #import pickle
 import pickle5 as pickle
 
-from . import get_p4, round_phi, IRC_cut, JetObs
+#from JetTopology.utils import get_p4, round_phi, IRC_cut, JetObs
+import JetTopology.utils as utils
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -43,10 +44,10 @@ class RawData:
         data_particle = {}
         for key in data:
             data_particle[key] = data[key].astype(np.float32)
-            data_particle[key] = round_phi(data_particle[key])
+            data_particle[key] = utils.round_phi(data_particle[key])
         data_particle_4p = {}    
         for key in data:
-            data_particle_4p[key] = get_p4(data_particle[key])       
+            data_particle_4p[key] = utils.get_p4(data_particle[key])       
             
         logger.info('binning q-g data into 100-350 GeV bins...')     
 
@@ -193,9 +194,9 @@ class ML_data:
             raw_data[key] = np.concatenate((data1[key], data2[names2[i]]), axis=0)      
         raw_data_4p = {}
         for key in data1:
-            raw_data[key] = round_phi(raw_data[key])
+            raw_data[key] = utils.round_phi(raw_data[key])
         for key in data1:
-            raw_data_4p[key] = get_p4(raw_data[key])
+            raw_data_4p[key] = utils.get_p4(raw_data[key])
 
         ## select w.r.t jet pT
         jet_particle = {}
@@ -219,14 +220,14 @@ class ML_data:
         for key in jet_particle:
             jet_particle_4p[key] = {}
             for tt in ['q', 'g']:
-                jet_particle_4p[key][tt] = get_p4( jet_particle[key][tt] )         
+                jet_particle_4p[key][tt] = utils.get_p4( jet_particle[key][tt] )         
                 logging.info(key + ' ' + tt + ' ' + str(len(jet_particle[key][tt])))        
 
         max_evt = 22000         
         for key in jet_particle:
             for case in jet_particle[key]:
                 pp = jet_particle_4p[key][case]
-                jet_particle[key][case] = IRC_cut().process(pp[:max_evt], dRmin=self.dRmin, zeta=self.zeta)
+                jet_particle[key][case] = utils.IRC_cut().process(pp[:max_evt], dRmin=self.dRmin, zeta=self.zeta)
                 np.nan_to_num(jet_particle[key][case], copy=False, nan=0.0)
                 logging.info(key + ' ' + case + ' ' + str(len(jet_particle[key][case])))
                 
@@ -264,7 +265,7 @@ class ML_data:
         train_b1_pair = {}
         for key in train_jet_particle:            
             pers_pairs = topology.ML_JetPersistance().get_ml_inputs(
-                get_p4(train_jet_particle[key]), 
+                utils.get_p4(train_jet_particle[key]), 
                 zeta_type=self.zeta_type, 
                 R=self.R
                 )
@@ -274,7 +275,7 @@ class ML_data:
         test_b1_pair = {}
         for key in test_jet_particle:
             pers_pairs = topology.ML_JetPersistance().get_ml_inputs(
-                get_p4(test_jet_particle[key]), 
+                utils.get_p4(test_jet_particle[key]), 
                 zeta_type=self.zeta_type, 
                 R=self.R
                 )
@@ -303,12 +304,12 @@ class ML_data:
         for key in train_jet_particle:
             taus = []
             for N in Ns:
-                taus.append(JetObs().Njettiness(get_p4(train_jet_particle[key]), N=N, beta=0.2))
+                taus.append(utils.JetObs().Njettiness(utils.get_p4(train_jet_particle[key]), N=N, beta=0.2))
             train_obs[key] = np.vstack(taus).T
         for key in test_jet_particle:
             taus = []
             for N in Ns:
-                taus.append(JetObs().Njettiness(get_p4(test_jet_particle[key]), N=N, beta=0.2))
+                taus.append(utils.JetObs().Njettiness(utils.get_p4(test_jet_particle[key]), N=N, beta=0.2))
             test_obs[key] = np.vstack(taus).T
         obs = {
             'train': train_obs,
@@ -327,14 +328,14 @@ class ML_data:
         train_b0_pair = {}
         for key in train_jet_particle:            
             train_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(
-                get_p4(train_jet_particle[key]), 
+                utils.get_p4(train_jet_particle[key]), 
                 k=self.k, 
                 p=self.p)
 
         test_b0_pair = {}        
         for key in test_jet_particle:
             test_b0_pair[key] = topology.ML_JetPersistance().get_kNN_ml_inputs(
-                get_p4(test_jet_particle[key]), 
+                utils.get_p4(test_jet_particle[key]), 
                 k=self.k,
                 p=self.p)            
 

@@ -1,8 +1,8 @@
 import numpy as np
-from . import make_parallel
-
 from pyjet import cluster, DTYPE_PTEPM
 from scipy.spatial import distance_matrix
+
+import JetTopology.utils as utils
 
 class JetObs:
     '''
@@ -58,12 +58,12 @@ class JetObs:
         return tau
 
     def angularity(self, jet_p4s, beta, k, R=0.6):
-        return np.array(make_parallel(self._angularity, beta=beta, k=k, R=R)(jet_p4s))
+        return np.array(utils.make_parallel(self._angularity, beta=beta, k=k, R=R)(jet_p4s))
 
     def ecf(self, jet_p4s, beta):
-        return np.array(make_parallel(self._2ecf, beta=beta))(jet_p4s)
+        return np.array(utils.make_parallel(self._2ecf, beta=beta))(jet_p4s)
 
     def Njettiness(self, jet_p4s, N=2, beta=1, R=0.6):
-        return np.array( make_parallel(self._Njettiness, N=N, beta=beta, R=R)(jet_p4s) )
+        return np.array( utils.make_parallel(self._Njettiness, N=N, beta=beta, R=R)(jet_p4s) )
 
         
