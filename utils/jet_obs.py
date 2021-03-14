@@ -57,7 +57,7 @@ class JetObs:
         return np.array(make_parallel(self._2ecf, beta=beta))(jet_p4s)
 
     def Njettiness(self, jet_p4s, N=2, beta=1, R=0.6):
-        return np.array(make_parallel(self._Njettiness, N=N, beta=beta, R=R))(jet_p4s)
+        return np.array( make_parallel(self._Njettiness, N=N, beta=beta, R=R)(jet_p4s) )
 
 
         
