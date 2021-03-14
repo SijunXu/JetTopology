@@ -419,7 +419,7 @@ class JetData:
                 bg_val = self._cat2table(b0_val['g'], b1_val['g'])
                 X_val = np.concatenate((sig_val, bg_val), axis=0)
                   
-                trainset, valset = TableObsDataset(X_train, obs_train, y_train), TableDataset(X_val, obs_val, y_val)     
+                trainset, valset = TableObsDataset(X_train, obs_train, y_train), TableObsDataset(X_val, obs_val, y_val)     
             else:
                 trainset, val_set = TableDataset(obs_train, y_train), TableDataset(obs_val, y_val)
 
