@@ -397,14 +397,16 @@ class JetData:
 
     def obs_data_loader(self, obs_fname, with_topo=True):
         obs = self._load_obs_data(obs_fname)
+        for key in obs:
+            obs[key] = np.array(obs[key])
         if with_topo:
             b0, b1 = self._load_data()
         if self.train:
             obs_train, obs_val = self._train_val_split(obs, idx=self.idx)
-            obs_train, obs_val = map(np.array, (obs_train, obs_val))
             y_train = [1 for _ in range(len(obs_train['q']))] + [0 for _ in range(len(obs_train['g']))]
             y_val = [1 for _ in range(len(obs_val['q']))] + [0 for _ in range(len(obs_val['g']))]
-
+            obs_train = np.concatenate([obs_train['q'], obs_train['g']], axis=0)
+            obs_val = np.concatenate([obs_val['q'], obs_val['g']], axis=0)
             if with_topo:
                 b0_train, b0_val = self._train_val_split(b0, idx=self.idx)
                 b1_train, b1_val = self._train_val_split(b1, idx=self.idx)
@@ -424,13 +426,16 @@ class JetData:
 
             train_loader = data.DataLoader(trainset, **self.loader_params)
             val_loader = data.DataLoader(valset, **self.loader_params)
-            return train_loader, val_loader
-        ##TODO
-        else:
-            sig = self._cat2table(b0['q'], b1['q'])
-            bg = self._cat2table(b0['g'], b1['g'])
-            X = np.concatenate((sig, bg), axis=0)
-            y = [1 for _ in range(len(sig))] + [0 for _ in range(len(bg))]
-            testset = TableDataset(X, y)
+            return train_loader, val_loader      
+        else: 
+            obs = np.concatenate([obs['q'], obs['g']], axsi=0)
+            y = [1 for _ in range(len(obs['q']))] + [0 for _ in range(len(obs['g']))]
+            if with_topo:
+                sig = self._cat2table(b0['q'], b1['q'])
+                bg = self._cat2table(b0['g'], b1['g'])
+                X = np.concatenate((sig, bg), axis=0)                    
+                testset = TableObsDataset(X, obs, y)
+            else:
+                testset = TableDataset(obs, y)
             test_loader = data.DataLoader(testset, **self.loader_params)
             return test_loader       
