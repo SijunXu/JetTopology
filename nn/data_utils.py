@@ -19,6 +19,26 @@ class TableDataset(data.Dataset):
     def __len__(self):
         return len(self.X)
 
+
+
+class TableObsDataset(data.Dataset):
+
+    def __init__(self, X, obs, target):
+        self.X = torch.from_numpy(X).float()
+        self.obs = torch.from_numpy(obs).float()
+        target = np.reshape(target, (-1, 1)).astype(np.float32)
+        self.target = torch.from_numpy(target)
+
+    def __getitem__(self, index):
+        x = self.X[index]
+        obs = self.obs[index]
+        y = self.target[index]        
+        return x, obs, y
+
+    def __len__(self):
+        return len(self.X)
+
+
 class PersDataset(data.Dataset):
     '''
     Dataset for PersNet

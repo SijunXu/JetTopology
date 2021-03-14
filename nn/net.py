@@ -31,6 +31,36 @@ class fcn_net(nn.Module):
             x = self.classify(x)
         return x
 
+
+class TopoObsNet(nn.Module):
+    '''
+    input: topological features + tau1-6
+    '''
+    def __init__(
+        self, 
+        topo_layers=[128, 128, 128, 64, 16], 
+        topo_indim=50, 
+        obs_layers=[128, 128, 16], 
+        obs_indim=6,
+        show_mid=False
+        ):
+        super(TopoObsNet, self).__init__()
+        self.topo_net = fcn_net(layers=topo_layers, indim=topo_indim)
+        self.obs_net = fcn_net(layers=obs_layers, indim=obs_indim)
+        self.classify = nn.Sequential(nn.Linear(2, 1), nn.Sigmoid())
+        self.show_mid = show_mid
+
+    def forawrd(self, x, obs):
+        topo_out = self.topo_net(x)
+        obs_out = self.obs_net(obs)
+        out = torch.cat([topo_out.view(-1, 1), obs_out.view(-1, 1)], dim=1)
+        out = self.classify(out)
+        if self.show_mid:
+            return out, topo_out, obs_out
+        else:
+            return out
+
+
 class DeepSet(nn.Module):
     '''
     DeepSet NN transforms data as :
