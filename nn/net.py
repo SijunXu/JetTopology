@@ -50,10 +50,10 @@ class TopoObsNet(nn.Module):
         self.classify = nn.Sequential(nn.Linear(2, 1), nn.Sigmoid())
         self.show_mid = show_mid
 
-    def forawrd(self, x, obs):
+    def forward(self, x, obs):        
         topo_out = self.topo_net(x)
         obs_out = self.obs_net(obs)
-        out = torch.cat([topo_out.view(-1, 1), obs_out.view(-1, 1)], dim=1)
+        out = torch.cat((topo_out.view(-1, 1), obs_out.view(-1, 1)), dim=1)
         out = self.classify(out)
         if self.show_mid:
             return out, topo_out, obs_out

@@ -387,15 +387,24 @@ class JetData:
             return train_loader, val_loader
 
         else:
-            sig = self._cat2table(b0['q'], b1['q'])
+            sig = self._cat2table(b0['q'], b1['q'])            
             bg = self._cat2table(b0['g'], b1['g'])
             X = np.concatenate((sig, bg), axis=0)
             y = [1 for _ in range(len(sig))] + [0 for _ in range(len(bg))]
             testset = TableDataset(X, y)
             test_loader = data.DataLoader(testset, **self.loader_params)
-            return test_loader     
+            return test_loader   
 
-    def obs_data_loader(self, obs_fname, with_topo=True):
+    def _trans2pers_only(self, X):
+        idx_dim = []
+        for i in range(6):
+            idx_dim += [5*i, 5*i+1]
+        for i in range(5):
+            idx_dim += [30 + 4*i, 30 + 4*i+1]
+        idx_dim = np.array(idx_dim)
+        return X[:, idx_dim]        
+
+    def obs_data_loader(self, obs_fname, with_topo=True, pers_only=False):
         obs = self._load_obs_data(obs_fname)
         for key in obs:
             obs[key] = np.array(obs[key])
@@ -405,6 +414,7 @@ class JetData:
             obs_train, obs_val = self._train_val_split(obs, idx=self.idx)
             y_train = [1 for _ in range(len(obs_train['q']))] + [0 for _ in range(len(obs_train['g']))]
             y_val = [1 for _ in range(len(obs_val['q']))] + [0 for _ in range(len(obs_val['g']))]
+            y_train, y_val = map(np.array, (y_train, y_val))
             obs_train = np.concatenate([obs_train['q'], obs_train['g']], axis=0)
             obs_val = np.concatenate([obs_val['q'], obs_val['g']], axis=0)
             if with_topo:
@@ -418,23 +428,28 @@ class JetData:
                 sig_val = self._cat2table(b0_val['q'], b1_val['q'])
                 bg_val = self._cat2table(b0_val['g'], b1_val['g'])
                 X_val = np.concatenate((sig_val, bg_val), axis=0)
-                  
+                if pers_only:
+                    X_train, X_val = self._trans2pers_only(X_train), self._trans2pers_only(X_val)               
                 trainset, valset = TableObsDataset(X_train, obs_train, y_train), TableObsDataset(X_val, obs_val, y_val)     
             else:
-                trainset, val_set = TableDataset(obs_train, y_train), TableDataset(obs_val, y_val)
+                trainset, valset = TableDataset(obs_train, y_train), TableDataset(obs_val, y_val)
 
             train_loader = data.DataLoader(trainset, **self.loader_params)
             val_loader = data.DataLoader(valset, **self.loader_params)
             return train_loader, val_loader      
-        else: 
-            obs = np.concatenate([obs['q'], obs['g']], axsi=0)
-            y = [1 for _ in range(len(obs['q']))] + [0 for _ in range(len(obs['g']))]
+        else:             
+            y = [ 1 for _ in range(len(obs['q'])) ] + [ 0 for _ in range(len(obs['g'])) ]
+            obs = np.concatenate([obs['q'], obs['g']], axis=0)
+            y = np.array(y)
             if with_topo:
                 sig = self._cat2table(b0['q'], b1['q'])
                 bg = self._cat2table(b0['g'], b1['g'])
-                X = np.concatenate((sig, bg), axis=0)                    
+                X = np.concatenate((sig, bg), axis=0)   
+                if pers_only:
+                    X = self._trans2pers_only(X)                 
                 testset = TableObsDataset(X, obs, y)
             else:
                 testset = TableDataset(obs, y)
             test_loader = data.DataLoader(testset, **self.loader_params)
             return test_loader       
+

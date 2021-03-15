@@ -50,13 +50,13 @@ def train_model(
 
             target = data[-1]
             optimizer.zero_grad()
+            #outputs = model(data[:-1])            
             if len(data) == 2:
                 outputs = model(data[0])
             elif len(data) == 3:
                 outputs = model(data[0], data[1])
             elif len(data) == 5:
                 outputs = model(data[0], data[1], data[2], data[3])
-
             loss = criterion(outputs, target)
             loss.backward()
             optimizer.step()
@@ -76,6 +76,7 @@ def train_model(
                 data[i_d] = data[i_d].to(device).float()
 
             target = data[-1]
+            #outputs = model(data[:-1])
             if len(data) == 2:
                 outputs = model(data[0])
             elif len(data) == 3:
@@ -139,7 +140,8 @@ class Trainer:
         train_params=None, 
         use_PersNet=False,
         use_obs=None,
-        obs_fname=None
+        obs_fname=None,
+        pers_only=False
         ):
         r'''
         `train_params`: a dict with key `'folder2save', 'name2save', 'num_epochs', 'device', 'hist_name'`
@@ -163,6 +165,7 @@ class Trainer:
         self.use_PersNet = use_PersNet
         self.use_obs = use_obs
         self.obs_fname = obs_fname
+        self.pers_only = pers_only
     
     def _train_iter(self, idx):
         r'''
@@ -182,7 +185,7 @@ class Trainer:
                 net = fcn_net(layers=self.layers, indim=self.indim, BN=True)
             else:
                 if self.use_obs == 'with_topo':
-                    net = TopoObsNet(**self.layers)
+                    net = TopoObsNet(**self.layers, topo_indim=self.indim)
                 else:
                     net = fcn_net(layers=self.layers, indim=6)        
 
@@ -199,7 +202,7 @@ class Trainer:
                     train_loader, val_loader = JD.data_loader()
                 else:
                     with_topo = ( self.use_obs == 'with_topo' )
-                    train_loader, val_loader = JD.obs_data_loader(self.obs_fname, with_topo=with_topo)                                        
+                    train_loader, val_loader = JD.obs_data_loader(self.obs_fname, with_topo=with_topo, pers_only=self.pers_only)     
             elif self.graph_type == 'kNN':
                 train_loader, val_loader = JD.kNN_data_loader()
 
@@ -253,6 +256,7 @@ class Evaluater(Trainer):
         loader_params=None, 
         train_params=None, 
         use_PersNet=False,
+        use_obs=None,
         obs_fname=None
         ):
         super(Evaluater, self).__init__(
@@ -264,6 +268,7 @@ class Evaluater(Trainer):
             loader_params, 
             train_params, 
             use_PersNet,
+            use_obs,
             obs_fname
             )         
         self.device = torch.device(self.train_params['device'])
@@ -297,8 +302,8 @@ class Evaluater(Trainer):
             elif len(data) == 3:
                 if self.use_obs == 'with_topo':
                     output, topo_out, obs_out = net(data[0], data[1])
-                    topo_outs.append(topo_out)
-                    obs_outs.append(obs_outs)
+                    topo_outs.append(topo_out.detach().cpu().numpy())
+                    obs_outs.append(obs_out.detach().cpu().numpy())
                 else:
                     output = net(data[0], data[1])
             elif len(data) == 5:
@@ -331,10 +336,15 @@ class Evaluater(Trainer):
             else:
                 if self.use_obs == 'with_topo':
                     net = TopoObsNet(**self.layers, show_mid=True)
+                else:
+                    net = fcn_net(layers=self.layers, indim=6)                    
 
         weight2load = self.net_name + '_run' + str(idx) + '.pt'
         net.load_state_dict(torch.load(weight2load))
-        
+        if self.use_obs == 'with_topo':
+            y_pred, y_true, topo_out, obs_out = self._evaluate_net(net, loader)
+            return y_pred, y_true, topo_out, obs_out
+
         y_pred, y_true = self._evaluate_net(net, loader)
         return y_pred, y_true
 
@@ -384,7 +394,7 @@ class Evaluater(Trainer):
         
         if self.use_obs == 'with_topo':
             topo_outs, obs_outs = map(np.array, ( topo_outs, obs_outs ))
-            topo_outs, obs_outs = np.average(topo_outs, axis=1), np.average(obs_outs, axis=1)
+            topo_outs, obs_outs = np.average(topo_outs, axis=0), np.average(obs_outs, axis=0)
             return y_preds, y_true, AUC, topo_outs, obs_outs
 
         return y_preds, y_true, AUC
