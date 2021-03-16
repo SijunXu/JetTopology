@@ -162,16 +162,13 @@ class JetData:
         if max_b0 is None:
             max_b0 = 0
             for p0 in b0:
-                max_b0 = max(len(p0), max_b0)
-        
+                max_b0 = max(len(p0), max_b0)        
         if max_b1 is None:
             max_b1 = 0
             for p1 in b1:
-                max_b1 = max(len(p1), max_b1)
-        
+                max_b1 = max(len(p1), max_b1)        
         b0_feat, b1_feat = np.zeros((n_jets, max_b0, 5)), np.zeros((n_jets, max_b1, 4))
         b0_weight, b1_weight = np.zeros((n_jets, max_b0)), np.zeros((n_jets, max_b1))
-
         for i, p0 in enumerate(b0):
             n_b0 = len(p0)
             if n_b0 == 1:
@@ -184,7 +181,6 @@ class JetData:
                 b1_feat[i, 0] = list(p1[1])
             elif n_b1 > 1:
                 b1_feat[i, :n_b1] = p1
-
         ## weight = log(b) - log(d)
         b0_weight = b0_feat[:, :, 0] - b0_feat[:, :, 1]
         b1_weight = b1_feat[:, :, 1] - b1_feat[:, :, 0]
@@ -195,11 +191,9 @@ class JetData:
         if max_b0 is None:
             max_b0 = 0
             for p0 in b0:
-                max_b0 = max(len(p0), max_b0)        
-        
+                max_b0 = max(len(p0), max_b0)                
         b0_feat = np.zeros((n_jets, max_b0, 5))
         b0_weight = np.zeros((n_jets, max_b0))
-
         for i, p0 in enumerate(b0):
             n_b0 = len(p0)
             if n_b0 == 1:
