@@ -80,6 +80,8 @@ class PerskNNDataset(data.Dataset):
         return len(self.target)    
 
 
+from sklearn.model_selection import train_test_split
+
 class JetData:
     r'''
     convert a dic of {'b0', 'b1', 'y'} / npz file, to `DataLoader` object
@@ -89,7 +91,8 @@ class JetData:
         train=True, 
         idx=None, 
         name2load=None, 
-        loader_params=None
+        loader_params=None,
+        use_random=False,
         ):        
         '''
         `loader_params`: a dict to contral `batch_size`, `shuffle`, `pin_memory`, `num_workers`
@@ -107,30 +110,37 @@ class JetData:
                     'pin_memory': False,
                     'num_workers': 2
                 }
+        ### using sklearn train_test_split 
+        self.use_random = use_random
 
     def _load_data(self): 
         with open(self.name2load, 'rb') as handle:
             x = pickle.load(handle)
             return x 
-
+                
     def _train_val_split(self, train_data, kfold=5, idx=0):
         r'''
         input `train_data` as a list
-        returns `train_data_tra` and `train_data_val` for 5 folds
+        returns `train_data_tra` and `train_data_val` for 5 folds    
         '''
-        nb_val = int( 20000/kfold )        
-        train_data_tra = []
-        train_data_val = []
-        for i in range(5):
-            ## loop over 5 pt bins 
-            full_idx = list(range(i*20000, (i+1)*20000))            
-            val_idx = list(range(i*20000+idx*nb_val, i*20000+(idx+1)*nb_val))
-            train_idx = list( set(full_idx)-set(val_idx) )
-            train_idx += [100000 + evt_idx for evt_idx in train_idx]
-            val_idx += [100000 + evt_idx for evt_idx in val_idx]
-            train_data_tra += [ train_data[idx] for idx in train_idx ]
-            train_data_val += [ train_data[idx] for idx in val_idx ]                    
-        return train_data_tra, train_data_val    
+        if self.use_random:
+            random_state = idx
+            train_data_tra, train_data_val = train_test_split(train_data, random_state=random_state, shuffle=True, test_size=0.111111)
+            return train_data_tra, train_data_val
+        else:            
+            nb_val = int( 20000/kfold )        
+            train_data_tra = []
+            train_data_val = []
+            for i in range(5):
+                ## loop over 5 pt bins 
+                full_idx = list(range(i*20000, (i+1)*20000))            
+                val_idx = list(range(i*20000+idx*nb_val, i*20000+(idx+1)*nb_val))
+                train_idx = list( set(full_idx)-set(val_idx) )
+                train_idx += [100000 + evt_idx for evt_idx in train_idx]
+                val_idx += [100000 + evt_idx for evt_idx in val_idx]
+                train_data_tra += [ train_data[idx] for idx in train_idx ]
+                train_data_val += [ train_data[idx] for idx in val_idx ]                    
+            return train_data_tra, train_data_val    
 
     def _make_persnet_dataset(self, y, b0, b1=None, max_b0=None, max_b1=None):
         '''
