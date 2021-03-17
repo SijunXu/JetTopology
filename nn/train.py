@@ -111,9 +111,8 @@ def train_model(
 
 '''
 fcn, persnet
-b0+b1, b1, b0+b1 + obs
+b0+b1, b1, b0+b1 + obs, use `input_dims` to select dim as nn inputs
 '''
-
 import JetTopology.nn as tn
 class Trainer:    
     r'''
@@ -129,9 +128,8 @@ class Trainer:
         loader_params=None, 
         train_params=None, 
         use_PersNet=False,
-        use_obs=None,
-        obs_fname=None,
-        pers_only=False
+        input_dims=None,
+        use_random=False
         ):
         r'''
         `train_params`: a dict with key `'folder2save', 'name2save', 'num_epochs', 'device', 'hist_name'`
@@ -139,7 +137,8 @@ class Trainer:
         `loader_params`: a dict with key `'batch_size', 'shuffle', 'pin_memory', num_workers`
         '''
         super().__init__()
-        ## train data to be loaded 
+        ## train data to be loaded
+        # `npz` file or `pickle` of a dict
         self.name2load = name2load
         
         ## if use_PersNet layers is a dict with key b0_phi_layers, b1_phi_layers, b0_rho_layers, b1_rho_layers, fc_layers
@@ -147,54 +146,49 @@ class Trainer:
         ## elif use net to topo + obs
         self.layers = layers
         
-        self.verbose = verbose        
+        self.verbose = verbose  
+        ### `indim` a dic if multiple inputs or a number if single input 
         self.indim = indim        
         self.loader_params = loader_params
         self.train_params = train_params
         self.graph_type = graph_type
-        self.use_PersNet = use_PersNet
-        self.use_obs = use_obs
-        self.obs_fname = obs_fname
-        self.pers_only = pers_only
-    
+        self.use_PersNet = use_PersNet     
+        self.input_dims = input_dims
+        self.use_random = use_random
+
+    def _get_net(self):
+        ### get net for training      
+        if self.use_PersNet and (self.graph_type=='DT'):
+            net = tn.PersNet(**self.indim, **self.layers)
+        elif self.use_PersNet and (self.graph_type=='kNN'):
+            net = tn.PersNetkNN(**self.indim, **self.layers)
+        else:
+            net = tn.fcn_net(layers=self.layers, indim=self.indim)
+        return net
+
+    def _get_loader(self, train=True, idx=None):
+        ### get data loaders
+        JD = tn.JetData(
+            train=train, 
+            idx=idx, 
+            name2load=self.name2load, 
+            loader_params=self.loader_params,
+            use_random=self.use_random
+            )
+        if self.use_PersNet:
+            return JD.pers_data_loader( use_b1=(self.graph_type=='DT') )  
+        else:
+            return JD.data_loader(input_dims=self.input_dims)
+
     def _train_iter(self, idx):
         r'''
         train net at `idx` th fold
         '''
         if self.verbose:
             print('training model with idx = {:d}'.format(idx))
-
-        ### get net for training
-        if self.use_PersNet:
-            if self.graph_type == 'DT':
-                net = tn.PersNet(b0_dim=5, b1_dim=4, **self.layers)
-            elif self.graph_type == 'kNN':
-                net = tn.PersNetkNN(b0_dim=5, **self.layers)  
-        else:
-            if self.use_obs is None:
-                net = tn.fcn_net(layers=self.layers, indim=self.indim, BN=True)
-            else:
-                if self.use_obs == 'with_topo':
-                    net = tn.TopoObsNet(**self.layers, topo_indim=self.indim)
-                else:
-                    net = tn.fcn_net(layers=self.layers, indim=6)        
-
-        ### get data loaders
-        JD = tn.JetData(train=True, idx=idx, name2load=self.name2load, loader_params=self.loader_params)
-        if self.use_PersNet:
-            if self.graph_type == 'DT':
-                train_loader, val_loader = JD.pers_data_loader()
-            if self.graph_type == 'kNN':
-                train_loader, val_loader = JD.kNN_pers_data_loader()
-        else:
-            if self.graph_type == 'DT':
-                if self.use_obs is None:
-                    train_loader, val_loader = JD.data_loader()
-                else:
-                    with_topo = ( self.use_obs == 'with_topo' )
-                    train_loader, val_loader = JD.obs_data_loader(self.obs_fname, with_topo=with_topo, pers_only=self.pers_only)                                        
-            elif self.graph_type == 'kNN':
-                train_loader, val_loader = JD.kNN_data_loader()
+    
+        net = self._get_net()
+        train_loader, val_loader = self._get_loader(train=True, idx=idx)
 
         ### train
         loaders = { 'train': train_loader, 'val': val_loader}
@@ -217,7 +211,6 @@ class Trainer:
             **self.train_params
         )
         del net    
-
 
     def kfold_train(self, kfold=5):
         r'''
@@ -246,9 +239,8 @@ class Evaluater(Trainer):
         loader_params=None, 
         train_params=None, 
         use_PersNet=False,
-        use_obs=None,
-        obs_fname=None,
-        pers_only=False
+        input_dims=None,
+        use_random=False
         ):
         super(Evaluater, self).__init__(
             name2load, 
@@ -258,20 +250,20 @@ class Evaluater(Trainer):
             verbose, 
             loader_params, 
             train_params, 
-            use_PersNet,
-            use_obs,
-            obs_fname,
-            pers_only
+            use_PersNet,     
+            input_dims,
+            use_random    
             )         
         self.device = torch.device(self.train_params['device'])
+        ## avoid shuffling in testing phase
         self.loader_params['shuffle'] = False
-        self.path2net = path2net #'/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
+        ## path2net 2b loaded
+        self.path2net = path2net
         if self.use_PersNet:
             self.path2net = os.path.join(self.path2net, 'PersNet')
-        else:
-            if self.obs_fname is None:
-                self.path2net = os.path.join(self.path2net, 'fcn')
-
+        else:            
+            self.path2net = os.path.join(self.path2net, 'fcn')
+        ## name of net prefix before `_run1.pt`
         self.net_name = os.path.join(self.path2net, self.train_params['name2save'])
 
     def _evaluate_net(self, net, loader):
@@ -280,27 +272,12 @@ class Evaluater(Trainer):
         net.eval()
 
         outputs, labels = [], []
-        if self.use_obs == 'with_topo':
-            topo_outs, obs_outs = [], []
-
         for i, data in enumerate(loader):
             for d_id in range(len(data)):
                 data[d_id] = data[d_id].to(self.device).float()
             
             label = data[-1]
-            
-            if len(data) == 2:
-                output = net(data[0])
-            elif len(data) == 3:
-                if self.use_obs == 'with_topo':
-                    output, topo_out, obs_out = net(data[0], data[1])
-                    topo_outs.append(topo_out.detach().cpu().numpy())
-                    obs_outs.append(obs_out.detach().cpu().numpy())
-                else:
-                    output = net(data[0], data[1])
-            elif len(data) == 5:
-                output = net(data[0], data[1], data[2], data[3])
-
+            output = net(*data[:-1])            
             labels.append(label.detach().cpu().numpy())
             outputs.append(output.detach().cpu().numpy())               
         try:
@@ -308,35 +285,13 @@ class Evaluater(Trainer):
             outputs = np.concatenate(outputs, axis=0)     
         except:
             labels = np.concatenate(labels)
-            outputs = np.concatenate(outputs)
-
-        if self.use_obs == 'with_topo':
-            topo_outs = np.concatenate(topo_outs)        
-            obs_outs = np.concatenate(obs_outs)
-            return outputs.reshape(-1), labels.reshape(-1), topo_outs.reshape(-1), obs_outs.reshape(-1)
+            outputs = np.concatenate(outputs)     
         return outputs.reshape(-1), labels.reshape(-1)
     
     def _idx_eva(self, idx, loader):
-        if self.use_PersNet:
-            if self.graph_type == 'DT':
-                net = tn.PersNet(b0_dim=5, b1_dim=4, **self.layers)
-            elif self.graph_type == 'kNN':
-                net = tn.PersNetkNN(b0_dim=5, **self.layers)
-        else:
-            if self.use_obs is None:
-                net = tn.fcn_net(layers=self.layers, indim=self.indim, BN=True)
-            else:
-                if self.use_obs == 'with_topo':
-                    net = tn.TopoObsNet(**self.layers, show_mid=True, topo_indim=self.indim, obs_indim=6)
-                else:
-                    net = tn.fcn_net(layers=self.layers, indim=6)                    
-
+        net = self._get_net()                        
         weight2load = self.net_name + '_run' + str(idx) + '.pt'
         net.load_state_dict(torch.load(weight2load))
-        if self.use_obs == 'with_topo':
-            y_pred, y_true, topo_out, obs_out = self._evaluate_net(net, loader)
-            return y_pred, y_true, topo_out, obs_out
-
         y_pred, y_true = self._evaluate_net(net, loader)
         return y_pred, y_true
 
@@ -344,44 +299,12 @@ class Evaluater(Trainer):
         '''
         return average output scores for 5 folds, labels and AUC score
         ''' 
-        JD = tn.JetData(train=False, name2load=self.name2load, loader_params=self.loader_params)
-        if self.use_PersNet:
-            if self.graph_type == 'DT':
-                loader = JD.pers_data_loader()
-            elif self.graph_type == 'kNN':
-                loader = JD.kNN_pers_data_loader()
-        else:
-            if self.graph_type == 'DT':
-                if self.use_obs is None:
-                    loader = JD.data_loader()
-                else:
-                    with_topo = ( self.use_obs == 'with_topo' )
-                    loader = JD.obs_data_loader(self.obs_fname, with_topo=with_topo, pers_only=self.pers_only)
-            elif self.graph_type == 'kNN':
-                loader = JD.kNN_data_loader()
-    
-
+        loader = self._get_loader(train=False)
         y_preds = []
-        if self.use_obs == 'with_topo':
-            topo_outs, obs_outs = [], []
-
         for idx in range(5):
-            print('evaluating {:} th fold'.format(idx))
-            if self.use_obs == 'with_topo':
-                y_pred, y_true, topo_out, obs_out = self._idx_eva(idx, loader)
-                topo_outs.append(topo_out)
-                obs_outs.append(obs_out)
-            else:
-                y_pred, y_true = self._idx_eva(idx, loader)
+            print('evaluating {:} th fold'.format(idx))       
+            y_pred, y_true = self._idx_eva(idx, loader)
             y_preds.append(y_pred)
-
-        y_preds = np.array(y_preds)        
-        y_preds = np.average(y_preds, axis=0)   
+        y_preds = np.average(np.array(y_preds), axis=0)   
         AUC = roc_auc_score(y_true, y_preds)
-        
-        if self.use_obs == 'with_topo':
-            topo_outs, obs_outs = map(np.array, ( topo_outs, obs_outs ))
-            topo_outs, obs_outs = np.average(topo_outs, axis=0), np.average(obs_outs, axis=0)
-            return y_preds, y_true, AUC, topo_outs, obs_outs
-
         return y_preds, y_true, AUC            
