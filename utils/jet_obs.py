@@ -35,7 +35,7 @@ class JetObs:
             pseudojets_input[i]['eta'] = p4.eta
             pseudojets_input[i]['phi'] = p4.phi
             pseudojets_input[i]['mass'] = p4.mass
-        sequence = cluster(pseudojets_input, algo='ee_kt')
+        sequence = cluster(pseudojets_input, algo='kt')
         jets = sequence.exclusive_jets(n_jet)
         return jets
         
@@ -49,6 +49,8 @@ class JetObs:
         jets = self._cluster_jets(jet_p4, n_jet=N)
         points = np.vstack([jet_p4.eta, jet_p4.phi]).T
         subjets_pos = np.zeros((N, 2))
+        points = utils.round_points(points)
+        subjets_pos = utils.round_points(points)
         for i in range(N):
             subjets_pos[i] = jets[i].eta, jets[i].phi
         #subjets_pos = np.vstack([jets.eta, jets.phi])
