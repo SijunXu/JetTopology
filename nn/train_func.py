@@ -274,13 +274,7 @@ class Evaluater(Trainer):
             )         
         self.device = torch.device(self.train_params['device'])
         self.loader_params['shuffle'] = False
-        self.path2net = path2net #'/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'
-        if self.use_PersNet:
-            self.path2net = os.path.join(self.path2net, 'PersNet')
-        else:
-            if self.obs_fname is None:
-                self.path2net = os.path.join(self.path2net, 'fcn')
-
+        self.path2net = path2net #'/home/sijun/projects/TopologyAtCollider/JetTopology/saved_models/IRC_scan'      
         self.net_name = os.path.join(self.path2net, self.train_params['name2save'])
 
     def _evaluate_net(self, net, loader):

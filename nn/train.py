@@ -259,10 +259,10 @@ class Evaluater(Trainer):
         self.loader_params['shuffle'] = False
         ## path2net 2b loaded
         self.path2net = path2net
-        if self.use_PersNet:
-            self.path2net = os.path.join(self.path2net, 'PersNet')
-        else:            
-            self.path2net = os.path.join(self.path2net, 'fcn')
+        #if self.use_PersNet:
+        #    self.path2net = os.path.join(self.path2net, 'PersNet')
+        #else:            
+        #    self.path2net = os.path.join(self.path2net, 'fcn')
         ## name of net prefix before `_run1.pt`
         self.net_name = os.path.join(self.path2net, self.train_params['name2save'])
 

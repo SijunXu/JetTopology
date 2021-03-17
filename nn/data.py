@@ -128,7 +128,7 @@ class JetData:
             train_data_tra, train_data_val = train_test_split(train_data, random_state=random_state, shuffle=True, test_size=0.111111)
             return train_data_tra, train_data_val
         else:            
-            nb_val = int( 20000/kfold )        
+            nb_val = int( 20000/5 )        
             train_data_tra = []
             train_data_val = []
             for i in range(5):
@@ -210,12 +210,13 @@ class JetData:
         '''
         #b0, b1 = self._load_data()
         f_data = np.load(self.name2load)
-        X, y = f_data['X'], f_data['y']
-        if input_dims:
+        X, y = f_data['X'], f_data['y']        
+        if input_dims is not None:
             X = X[:, input_dims]
         if self.train:
             X_train, X_val = self._train_val_split(X, self.idx)
-            y_train, y_val = self._train_val_split(y, self.idx)        
+            y_train, y_val = self._train_val_split(y, self.idx)    
+            X_train, X_val, y_train, y_val = map(np.array, (X_train, X_val, y_train, y_val))
             trainset, valset = TableDataset(X_train, y_train), TableDataset(X_val, y_val)           
             train_loader = data.DataLoader(trainset, **self.loader_params)
             val_loader = data.DataLoader(valset, **self.loader_params)
