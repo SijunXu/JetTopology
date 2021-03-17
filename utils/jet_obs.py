@@ -35,8 +35,8 @@ class JetObs:
             pseudojets_input[i]['eta'] = p4.eta
             pseudojets_input[i]['phi'] = p4.phi
             pseudojets_input[i]['mass'] = p4.mass
-        sequence = cluster(pseudojets_input, algo='kt', R=max_R, p=1)
-        jets = sequence.exclusive_jets(n_jet)
+        sequence = cluster(pseudojets_input, R=max_R, p=1)
+        jets = sequence.exclusive_jets(n_jet) ## decluster
         return jets
         
 
