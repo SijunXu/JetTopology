@@ -47,14 +47,18 @@ class JetObs:
         if len(jet_p4) < N:
             return 0.0
         jets = self._cluster_jets(jet_p4, n_jet=N, max_R=R)
-        points = np.vstack([jet_p4.eta, jet_p4.phi]).T
-        subjets_pos = np.zeros((N, 2))
-        points = utils.round_points(points)
-        subjets_pos = utils.round_points(points)
-        for i in range(N):
-            subjets_pos[i] = jets[i].eta, jets[i].phi
+        #points = np.vstack([jet_p4.eta, jet_p4.phi]).T
+        #subjets_pos = np.zeros((N, 2))
+        #points = utils.round_points(points)
+        #subjets_pos = utils.round_points(points)
+        dists = np.zeros((len(jet_p4), N))
+        for j in range(len(jet_p4)):
+            for i in range(N):            
+                dists[j, i] = jet_p4[j].delta_r(jets[i])
+                #subjets_pos[i] = jets[i].eta, jets[i].phi
         #subjets_pos = np.vstack([jets.eta, jets.phi])
-        dists = distance_matrix(points, subjets_pos) ** beta
+        #dists = distance_matrix(points, subjets_pos) ** beta
+        dists = dists ** beta
         z = jet_p4.pt / sum(jet_p4.pt)
         tau  = sum(z * np.min(dists, axis=1)) / (R ** beta)
         return tau
