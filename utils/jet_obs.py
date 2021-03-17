@@ -28,14 +28,14 @@ class JetObs:
                     ecf += z[i] * z[j] * ( dist[i, j] ** beta )
         return ecf 
 
-    def _cluster_jets(self, jet_p4, n_jet):        
+    def _cluster_jets(self, jet_p4, n_jet, max_R):        
         pseudojets_input = np.zeros(len(jet_p4), dtype=DTYPE_PTEPM)
         for i, p4 in enumerate(jet_p4):
             pseudojets_input[i]['pT'] = p4.pt
             pseudojets_input[i]['eta'] = p4.eta
             pseudojets_input[i]['phi'] = p4.phi
             pseudojets_input[i]['mass'] = p4.mass
-        sequence = cluster(pseudojets_input, algo='kt')
+        sequence = cluster(pseudojets_input, algo='kt', R=max_R)
         jets = sequence.exclusive_jets(n_jet)
         return jets
         
@@ -46,7 +46,7 @@ class JetObs:
         '''
         if len(jet_p4) < N:
             return 0.0
-        jets = self._cluster_jets(jet_p4, n_jet=N)
+        jets = self._cluster_jets(jet_p4, n_jet=N, max_R=R)
         points = np.vstack([jet_p4.eta, jet_p4.phi]).T
         subjets_pos = np.zeros((N, 2))
         points = utils.round_points(points)
