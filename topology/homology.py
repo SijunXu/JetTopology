@@ -285,7 +285,7 @@ class ML_JetPersistance(JetPersistance):
                 return ml_inputs
 
 
-    def _get_b1_ml_inputs(self, jet_4p, zeta_type='zeta', R=0.6):
+    def _get_b1_ml_inputs(self, jet_4p, zeta_type='zeta', R=0.6, area=None):
         '''
         compute the ml inputs for holes
         '''
@@ -300,7 +300,9 @@ class ML_JetPersistance(JetPersistance):
             idx = np.argsort(zeta)[::-1]
         elif zeta_type == 'pt_density':            
             zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
-            area = get_vor_area(points, R=R)
+            if area is None:
+                area = get_vor_area(points, R=R)
+            area[area==0] = 1e-5
             zeta = zeta / area
             idx = np.argsort(zeta)[::-1]
         zeta = zeta[idx]
