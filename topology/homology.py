@@ -151,7 +151,7 @@ class ML_JetPersistance(JetPersistance):
     def __init__(self):
         super(ML_JetPersistance, self).__init__()
     
-    def _get_b0_ml_inputs(self, jet_4p, zeta_type='zeta', R=0.6, show_history=False):
+    def _get_b0_ml_inputs(self, jet_4p, zeta_type='zeta', R=0.6, area=None, show_history=False):
         '''
         compute ml inputs for connected components as well the jet branches evolving:
 
@@ -173,7 +173,9 @@ class ML_JetPersistance(JetPersistance):
             idx = np.argsort(zeta)[::-1]
         elif zeta_type == 'pt_density':            
             zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
-            area = get_vor_area(points, R=R)
+            if area is None:
+                area = get_vor_area(points, R=R)        
+            area[area==0] = 1e-5
             zeta = zeta / area
             idx = np.argsort(zeta)[::-1]
 
