@@ -7,7 +7,7 @@ from scipy.spatial import cKDTree
 '''
 A pipline for doing Topological Data Analysis with inputs of a set of particles in a jet
 inlcudes:
-betti numbers for super-level / sub-level
+betti numbers for superset / subset
 persistant homology 
 downstream information for machine learning
 '''
