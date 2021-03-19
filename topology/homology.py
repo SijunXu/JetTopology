@@ -164,7 +164,8 @@ class ML_JetPersistance(JetPersistance):
 
         jet_pt = jet_4p.sum().pt
         jet_ht = np.sum(jet_4p.pt)
-        points = np.vstack((jet_4p.eta, jet_4p.phi)).T
+        ## centering points 
+        points = np.vstack((jet_4p.eta - jet_4p.sum().eta, jet_4p.phi - jet_4p.sum().phi)).T
         points = round_points(points)
         ## descending sorted w.r.t zeta
         if zeta_type == 'zeta':

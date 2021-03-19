@@ -5,7 +5,7 @@ from scipy.spatial import cKDTree
 
 
 '''
-A pipline for doing Topological Data Analysis with inputs of a set of particles in a jet
+A pipline for Topological Data Analysis with inputs of a set of particles in a jet
 inlcudes:
 betti numbers for superset / subset
 persistant homology 
@@ -26,7 +26,7 @@ def createTINgraph(points, addVirtual=False):
     try:    
         TIN = Delaunay(points)
     except:
-        print( points + ' cannot be triangulated with '+str(len(points))+' particles, returns the fully connected graph' )
+        print( points + ' cannot be triangulated with '+str(len(points))+' particles, returns a fully connected graph' )
         edges = set((i, j) for i in range(len(points)) for j in range(len(points)) if i < j)
         return nx.Graph(edges)
 
