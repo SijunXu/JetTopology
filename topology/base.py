@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 from scipy.spatial import Voronoi, voronoi_plot_2d, Delaunay, ConvexHull, distance_matrix
 from scipy.spatial import cKDTree
-
+from numba import jit
 
 '''
 A pipline for Topological Data Analysis with inputs of a set of particles in a jet
@@ -11,6 +11,7 @@ betti numbers for superset / subset
 persistant homology 
 downstream information for machine learning
 '''
+
 
 def createTINgraph(points, addVirtual=False):
     
@@ -32,16 +33,19 @@ def createTINgraph(points, addVirtual=False):
 
     edges = set()
     # for each Delaunay triangle
-    for n in range(TIN.nsimplex):
-        edge = sorted([TIN.vertices[n,0], TIN.vertices[n,1]])
+    nsimp = TIN.nsimplex
+    for n in range(nsimp):
+        vertex = TIN.vertices
+        edge = sorted([vertex[n,0], vertex[n,1]])
         edges.add((edge[0], edge[1]))
-        edge = sorted([TIN.vertices[n,0], TIN.vertices[n,2]])
+        edge = sorted([vertex[n,0], vertex[n,2]])
         edges.add((edge[0], edge[1]))
-        edge = sorted([TIN.vertices[n,1], TIN.vertices[n,2]])
+        edge = sorted([vertex[n,1], vertex[n,2]])
         edges.add((edge[0], edge[1]))
     if addVirtual:
         hull = ConvexHull(points)
-        for idx in hull.vertices:
+        vertex = hull.vertices
+        for idx in vertex:
             edges.add((idx, -1))        
     graph = nx.Graph(list(edges))
     return graph

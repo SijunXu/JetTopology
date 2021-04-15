@@ -2,6 +2,7 @@ import numpy as np
 from collections import OrderedDict
 import networkx as nx
 from scipy.spatial import Voronoi, voronoi_plot_2d, Delaunay, ConvexHull, distance_matrix
+from numba import jit
 
 from JetTopology.topology.base import createTINgraph, get_vor_area, create_kNN_graph, compute_dist
 from JetTopology.utils import make_parallel, round_points
@@ -14,21 +15,23 @@ class JetPersistance:
     def __init__(self):
         super(JetPersistance, self).__init__()    
 
+    #@jit
     def _b0_diagram(self, jet_4p, zeta_type='zeta', R=0.6, graph_type='DT', k=2, p=0):
 
         r'''
         compute the persistance diagram for connected components 
         '''        
-
-        jet_pt = jet_4p.sum().pt
+        jet_pt = np.sum(jet_4p.pt)
         points = np.vstack((jet_4p.eta, jet_4p.phi)).T
         points = round_points(points)
         ## descending sorted w.r.t zeta
         if zeta_type == 'zeta':
-            zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            # zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            zeta = jet_4p.pt / jet_pt
             idx = np.argsort(zeta)[::-1]
         elif zeta_type == 'pt_density':            
-            zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            # zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            zeta = jet_4p.pt / jet_pt
             area = get_vor_area(points, R=R)
             zeta = zeta / area
             idx = np.argsort(zeta)[::-1]
@@ -43,44 +46,48 @@ class JetPersistance:
             dist = compute_dist(jet_4p, p=p)
             graph = create_kNN_graph(dist, k=k)        
     
-        jet_branches = OrderedDict()
-
+        jet_branches = {}
+        nx_connected_comp = nx.connected_components
         for i, cc in enumerate(zeta):
             ## super-level graph
             nodes2del = list( np.arange(len(jet_4p))[ (1+i): ] ) 
             H = graph.copy()
             H.remove_nodes_from(nodes2del)
-            comp_ll = [ c for c in nx.connected_components(H) ]
+            comp_ll = [ c for c in nx_connected_comp(H) ]
             ## compute [b, d] pairs, where b >= d
             if len(comp_ll) > 0:
                 for compset in comp_ll:
-                    compset = sorted(list(compset))
-                    if str(compset[0]) not in jet_branches:
+                    #compset = sorted(list(compset))
+                    compset = list(compset)
+                    min_node = min(compset)
+                    if min_node not in jet_branches:
                         if i < len(zeta) - 1:
-                            jet_branches[str(compset[0])] = [ cc, zeta[i+1] ]
+                            jet_branches[min_node] = [ cc, zeta[i+1] ]
                         else:
-                            jet_branches[str(compset[0])] = [ cc, cc ]
-                    elif str(compset[0]) in jet_branches:
+                            jet_branches[min_node] = [ cc, cc ]
+                    elif min_node in jet_branches:
                         if i < len(zeta) - 1:
-                            jet_branches[str(compset[0])][1] = zeta[i+1] 
+                            jet_branches[min_node][1] = zeta[i+1] 
                         else:
-                            jet_branches[str(compset[0])][1] = cc                        
+                            jet_branches[min_node][1] = cc                        
         return np.array( [ jet_branches[key] for key in jet_branches ] ) 
 
+    #@jit
     def _b1_diagram(self, jet_4p, zeta_type='zeta', R=0.6):
         r'''
         compute persistence diagrams for holes
         '''
-
-        jet_pt = jet_4p.sum().pt
+        jet_pt = np.sum(jet_4p.pt)
         points = np.vstack((jet_4p.eta, jet_4p.phi)).T
         points = round_points(points)
         ## ascending sorted w.r.t zeta
         if zeta_type == 'zeta':
-            zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            # zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            zeta = jet_4p.pt / jet_pt
             idx = np.argsort(zeta)[::-1]
         elif zeta_type == 'pt_density':            
-            zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            # zeta = np.array([ jet_4p[i].pt / jet_pt for i in range(len(jet_4p)) ])
+            zeta = jet_4p.pt / jet_pt
             area = get_vor_area(points, R=R)
             zeta = zeta / area
             idx = np.argsort(zeta)[::-1]
@@ -92,23 +99,26 @@ class JetPersistance:
         graph = createTINgraph(points, addVirtual=True)  
 
         anchor_dic = {}        
-
+        nx_connected_comp = nx.connected_components
         for i, cc in enumerate(zeta):
             nodes2del = list(np.arange(len(jet_4p))[(1+i):])
             H = graph.copy()
             H.remove_nodes_from(nodes2del)
-            comp_ll = [c for c in nx.connected_components(H)]
+            comp_ll = [c for c in nx_connected_comp(H)]
             ## compute [b, d] pairs, where b >= d
             if len(comp_ll) > 0:
                 for compset in comp_ll:
-                    compset = sorted(list(compset))
-                    if (str(list(compset)[0]) not in anchor_dic) and (str(list(compset)[0])!=str(-1)):
-                        anchor_dic[str(list(compset)[0])] = [zeta[i+1], cc]
-                    elif str(list(compset)[0]) in anchor_dic: 
-                        anchor_dic[str(list(compset)[0])][0] = zeta[i+1] if cc<zeta[-1] else zeta[-1]                    
+                    # compset = sorted(list(compset))
+                    compset = list(compset)
+                    min_node = min(compset)
+                    if (min_node not in anchor_dic) and (min_node != -1):
+                        anchor_dic[min_node] = [zeta[i+1], cc]
+                    elif min_node in anchor_dic: 
+                        anchor_dic[min_node][0] = zeta[i+1] if cc<zeta[-1] else zeta[-1]             
         return np.array( [anchor_dic[key] for key in anchor_dic] )
 
     #@staticmethod
+    #@jit(nopython=True, nogil=True)
     def compute_persistence(self, jet_4ps, case=['b0', 'b1'], zeta_type='zeta', R=0.6, n_jobs=-1, **kwargs):
         '''
         compuet persistence diagrams for a list of jet 4-momenta
