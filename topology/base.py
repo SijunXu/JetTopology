@@ -20,6 +20,8 @@ def createTINgraph(points, addVirtual=False):
     '''
 
     ## if the number of particles in a jet is less than 3, then return fully connected graph
+    rand_points = np.random.uniform(-1e-6, 1e-6, size=points.shape)
+    points += rand_points
     if len(points) < 3:
         edges = set((i, j) for i in range(len(points)) for j in range(len(points)) if i < j)
         return nx.Graph(edges)
@@ -29,25 +31,22 @@ def createTINgraph(points, addVirtual=False):
     except:
         print( points + ' cannot be triangulated with '+str(len(points))+' particles, returns a fully connected graph' )
         edges = set((i, j) for i in range(len(points)) for j in range(len(points)) if i < j)
-        return nx.Graph(edges)
+        return nx.Graph(edges)  
 
-    edges = set()
-    # for each Delaunay triangle
-    nsimp = TIN.nsimplex
-    for n in range(nsimp):
-        vertex = TIN.vertices
-        edge = sorted([vertex[n,0], vertex[n,1]])
-        edges.add((edge[0], edge[1]))
-        edge = sorted([vertex[n,0], vertex[n,2]])
-        edges.add((edge[0], edge[1]))
-        edge = sorted([vertex[n,1], vertex[n,2]])
-        edges.add((edge[0], edge[1]))
+    graph = nx.Graph()    
+    for path in TIN.vertices:
+        nx.add_path(graph, path)    
     if addVirtual:
+        edges = set()
         hull = ConvexHull(points)
         vertex = hull.vertices
         for idx in vertex:
-            edges.add((idx, -1))        
-    graph = nx.Graph(list(edges))
+            edges.add((-1, idx))        
+        graph.add_edges_from(list(edges))
+    if not addVirtual and len(points) > len(graph.nodes()):
+        return createTINgraph(points, addVirtual=False)
+    if addVirtual and len(points)+1 > len(graph.nodes()):
+        return createTINgraph(points, addVirtual=True)
     return graph
 
 

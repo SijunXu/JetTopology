@@ -7,6 +7,7 @@ from numba import jit
 from JetTopology.topology.base import createTINgraph, get_vor_area, create_kNN_graph, compute_dist
 from JetTopology.utils import make_parallel, round_points
 
+from time import time 
 
 class JetPersistance:
     '''
@@ -21,8 +22,9 @@ class JetPersistance:
         r'''
         compute the persistance diagram for connected components 
         '''        
-        jet_pt = np.sum(jet_4p.pt)
-        points = np.vstack((jet_4p.eta, jet_4p.phi)).T
+        jet_pt = sum(jet_4p.pt)
+        jet = jet_4p.sum()
+        points = np.vstack((jet_4p.eta - jet.eta, jet_4p.phi - jet.phi)).T
         points = round_points(points)
         ## descending sorted w.r.t zeta
         if zeta_type == 'zeta':
@@ -36,6 +38,7 @@ class JetPersistance:
             zeta = zeta / area
             idx = np.argsort(zeta)[::-1]
         zeta = zeta[idx]
+        zeta += np.random.uniform(-1e-6, 1e-6, size=zeta.shape)
         jet_4p = jet_4p[idx]
         points = points[idx]
 
@@ -46,13 +49,21 @@ class JetPersistance:
             dist = compute_dist(jet_4p, p=p)
             graph = create_kNN_graph(dist, k=k)        
     
+        since_time = time()
         jet_branches = {}
         nx_connected_comp = nx.connected_components
+        ## add node from previous one
+        H = nx.Graph()       
         for i, cc in enumerate(zeta):
             ## super-level graph
-            nodes2del = list( np.arange(len(jet_4p))[ (1+i): ] ) 
-            H = graph.copy()
-            H.remove_nodes_from(nodes2del)
+            # nodes2del = list( np.arange(len(jet_4p))[ (1+i): ] )
+            H.add_node(i)
+            neighbor = graph.neighbors(i)
+            for n in neighbor:
+                if n < i:
+                    H.add_edge(n, i)
+            #H = graph.copy()
+            #H.remove_nodes_from(nodes2del)
             comp_ll = [ c for c in nx_connected_comp(H) ]
             ## compute [b, d] pairs, where b >= d
             if len(comp_ll) > 0:
@@ -69,7 +80,7 @@ class JetPersistance:
                         if i < len(zeta) - 1:
                             jet_branches[min_node][1] = zeta[i+1] 
                         else:
-                            jet_branches[min_node][1] = cc                        
+                            jet_branches[min_node][1] = cc   
         return np.array( [ jet_branches[key] for key in jet_branches ] ) 
 
     #@jit
@@ -92,6 +103,7 @@ class JetPersistance:
             zeta = zeta / area
             idx = np.argsort(zeta)[::-1]
         zeta = zeta[idx]
+        zeta += np.random.uniform(-1e-6, 1e-6, size=zeta.shape)
         jet_4p = jet_4p[idx]
         points = points[idx]
 
@@ -100,19 +112,30 @@ class JetPersistance:
 
         anchor_dic = {}        
         nx_connected_comp = nx.connected_components
+        H = nx.Graph()
+        H.add_node(-1)
         for i, cc in enumerate(zeta):
             nodes2del = list(np.arange(len(jet_4p))[(1+i):])
-            H = graph.copy()
-            H.remove_nodes_from(nodes2del)
+            
+            H.add_node(i)        
+            neighbor = graph.neighbors(i)
+            for n in neighbor:
+                if n < i:
+                    H.add_edge(n, i)                                            
+            # H = graph.copy()
+            # H.remove_nodes_from(nodes2del)
             comp_ll = [c for c in nx_connected_comp(H)]
             ## compute [b, d] pairs, where b >= d
             if len(comp_ll) > 0:
                 for compset in comp_ll:
                     # compset = sorted(list(compset))
-                    compset = list(compset)
+                    compset = list(compset) 
                     min_node = min(compset)
                     if (min_node not in anchor_dic) and (min_node != -1):
-                        anchor_dic[min_node] = [zeta[i+1], cc]
+                        if i < len(zeta) - 1:
+                            anchor_dic[min_node] = [zeta[i+1], cc]
+                        else:
+                            anchor_dic[min_node] = [cc, cc]
                     elif min_node in anchor_dic: 
                         anchor_dic[min_node][0] = zeta[i+1] if cc<zeta[-1] else zeta[-1]             
         return np.array( [anchor_dic[key] for key in anchor_dic] )
