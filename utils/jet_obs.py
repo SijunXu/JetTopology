@@ -12,11 +12,13 @@ class JetObs:
         super().__init__()
 
     def _angularity(self, jet_p4, beta, k, R=0.6):
+        if len(jet_p4) <= 1:
+            return 0
         z = jet_p4.pt / np.sum(jet_p4.pt)
         ang = ((jet_p4.eta - jet_p4.sum().eta) ** 2 + (jet_p4.phi - jet_p4.sum().phi) **2) ** .5 / R
         return np.sum( (z ** k) * (ang ** beta) )
 
-    def _2ecf(self, jet_p4, beta):
+    def _2ecf(self, jet_p4, beta):        
         z = jet_p4.pt / np.sum(jet_p4.pt)
         ecf = 0.0
         pos = np.vstack([jet_p4.eta, jet_p4.phi]).T
