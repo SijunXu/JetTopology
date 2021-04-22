@@ -24,7 +24,7 @@ class JetPersistance:
         '''        
         jet_pt = sum(jet_4p.pt)
         jet = jet_4p.sum()
-        points = np.vstack((jet_4p.eta - jet.eta, jet_4p.phi - jet.phi)).T
+        points = np.vstack((jet_4p.eta, jet_4p.phi)).T
         points = round_points(points)
         ## descending sorted w.r.t zeta
         if zeta_type == 'zeta':
@@ -49,7 +49,6 @@ class JetPersistance:
             dist = compute_dist(jet_4p, p=p)
             graph = create_kNN_graph(dist, k=k)        
     
-        since_time = time()
         jet_branches = {}
         nx_connected_comp = nx.connected_components
         ## add node from previous one

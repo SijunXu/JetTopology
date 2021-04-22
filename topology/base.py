@@ -23,6 +23,10 @@ def createTINgraph(points, addVirtual=False):
     rand_points = np.random.uniform(-1e-6, 1e-6, size=points.shape)
     points += rand_points
     if len(points) < 3:
+        if len(points) == 1:
+            graph = nx.Graph()
+            graph.add_node(0)
+            return graph
         edges = set((i, j) for i in range(len(points)) for j in range(len(points)) if i < j)
         return nx.Graph(edges)
     ## if 
